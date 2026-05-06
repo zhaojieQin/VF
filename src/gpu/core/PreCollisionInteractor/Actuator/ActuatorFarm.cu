@@ -489,7 +489,9 @@ void ActuatorFarm::initBoundingVolumes()
 {
     std::vector<uint> nodesInBoundingVolumes;
 
-    const real maxFloatingAmplitude = std::max({ floatingMaximumAmplitudex, floatingMaximumAmplitudey, floatingMaximumAmplitudez });
+    const real maxFloatingAmplitude = std::sqrt(floatingMaximumAmplitudex * floatingMaximumAmplitudex +
+                                                floatingMaximumAmplitudey * floatingMaximumAmplitudey +
+                                                floatingMaximumAmplitudez * floatingMaximumAmplitudez);
 
     // --- Rotor Bounding Volume ---
     const bool useVAWTVolume = this->hasVAWTRotorVolume();
