@@ -59,7 +59,7 @@ public:
           bladeNormalCoefficients(bladeNormalCoefficients),
           ActuatorFarm(std::move(para), std::move(cudaMemoryManager), diameter,
                        computeBladeRadii(diameter, numberOfPointsPerBlade), turbinePositionsX, turbinePositionsY,
-                       turbinePositionsZ, smearingWidth, level, true, numberOfBlades, hubConfig, towerConfig, floatingConfig)
+                       turbinePositionsZ, smearingWidth, level, true, numberOfBlades, hubConfig, towerConfig, std::nullopt, floatingConfig)
     {
         if (numberOfTurbines != rotorSpeeds.size())
             throw std::runtime_error("ActuatorFarmStandalone::ActuatorFarmStandalone: rotor speeds need to have same length "
