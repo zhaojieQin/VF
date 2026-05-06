@@ -235,7 +235,6 @@ namespace gpu_bindings::actuator_farm
                         const std::optional<real>,
                         const std::optional<real>,
                         const std::optional<real>,
-                        const std::optional<real>,
                         const uint,
                         const std::optional<std::vector<real>>&>(),
                         py::arg("para"),
