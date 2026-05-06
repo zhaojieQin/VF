@@ -593,7 +593,7 @@ void ActuatorFarm::initBoundingVolumes()
 
                 if (inCylinderVolume<z, false>(nodeX, nodeY, nodeZ, towerCenterX, towerCenterY,
                                                towerTopZ - c1o2 * towerHeights[turbine], towerHeights[turbine], towerRadius,
-                                               c3o2 * smearingWidth)) {
+                                               c3o2 * smearingWidth + maxFloatingAmplitude)) {
                     nodesInBoundingVolumes.push_back((uint)pos);
                 }
             }
