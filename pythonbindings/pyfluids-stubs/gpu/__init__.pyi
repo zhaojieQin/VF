@@ -88,6 +88,17 @@ class VAWTConfig:
             rotor_height: float, 
             flag_localized_smearing_width: bool) -> None: ...
 
+class FloatingConfig:
+    maximum_amplitude_x: float
+    maximum_amplitude_y: float
+    maximum_amplitude_z: float
+    def __init__(
+        self,
+        maximum_amplitude_x: float,
+        maximum_amplitude_y: float,
+        maximum_amplitude_z: float,
+    ) -> None: ...
+
 class ActuatorFarm(PreCollisionInteractor):
     def __init__(
         self,
@@ -105,6 +116,7 @@ class ActuatorFarm(PreCollisionInteractor):
         hub_config: Optional[HubConfig] = ...,
         tower_config: Optional[TowerConfig] = ...,
         vawt_config: Optional[VAWTConfig] = ...,
+        floating_config: Optional[FloatingConfig] = ...,
     ) -> None: ...
     def update_forces_and_coordinates(self, time: float, deltaT: float) -> None: ...
     def get_turbine_pos(self, turbine: int) -> npt.NDArray[np.float32]: ...
@@ -224,6 +236,7 @@ class ActuatorFarmStandalone(ActuatorFarm):
         level: int,
         hub_config: Optional[HubConfig] = ...,
         tower_config: Optional[TowerConfig] = ...,
+        floating_config: Optional[FloatingConfig] = ...,
         hub_drag_coeff: Optional[float] = ...,
         hub_skin_friction_coeff: Optional[float] = ...,
         tower_drag_coeff: Optional[float] = ...,

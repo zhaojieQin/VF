@@ -66,6 +66,11 @@ public:
         real rotorHeight;
         bool flagLocalSmearingWidth;
     };
+    struct FloatingConfig {
+        real maximumAmplitudex;
+        real maximumAmplitudey;
+        real maximumAmplitudez;
+    };
 
     ActuatorFarm(
         SPtr<Parameter> para,
@@ -81,7 +86,8 @@ public:
         const uint numberOfBlades = 3,
         const std::optional<HubConfig>& hubConfig = std::nullopt,
         const std::optional<TowerConfig>& towerConfig = std::nullopt,
-        const std::optional<VAWTConfig>& vawtConfig = std::nullopt
+        const std::optional<VAWTConfig>& vawtConfig = std::nullopt,
+        const std::optional<FloatingConfig>& floatingConfig = std::nullopt
     ) :
         diameter(diameter),
         numberOfBlades(numberOfBlades),
@@ -108,6 +114,9 @@ public:
         numberOfBladePoints(numberOfTurbines * numberOfBladePointsPerTurbine),
         vawtRotorHeight(vawtConfig ? vawtConfig->rotorHeight : 0.0),
         flagLocalSmearingWidth(vawtConfig ? vawtConfig->flagLocalSmearingWidth : false),
+        floatingMaximumAmplitudex(floatingConfig ? floatingConfig->maximumAmplitudex : 0.0),
+        floatingMaximumAmplitudey(floatingConfig ? floatingConfig->maximumAmplitudey : 0.0),
+        floatingMaximumAmplitudez(floatingConfig ? floatingConfig->maximumAmplitudez : 0.0),
         PreCollisionInteractor(std::move(para), std::move(cudaMemoryManager))
     {
         using namespace vf::basics::constant;
@@ -337,6 +346,9 @@ protected:
     const std::vector<real> towerHeights;
     real maxTowerHeight{0.0};
     int streamIndex;
+    const real floatingMaximumAmplitudex;
+    const real floatingMaximumAmplitudey;
+    const real floatingMaximumAmplitudez;
 
     bool writeOutput{false};
     std::string outputName;

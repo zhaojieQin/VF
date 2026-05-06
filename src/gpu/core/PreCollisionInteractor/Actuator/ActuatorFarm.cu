@@ -489,14 +489,17 @@ void ActuatorFarm::initBoundingVolumes()
 {
     std::vector<uint> nodesInBoundingVolumes;
 
+    const real maxFloatingAmplitude = std::max({ floatingMaximumAmplitudex, floatingMaximumAmplitudey, floatingMaximumAmplitudez });
+
     // --- Rotor Bounding Volume ---
     const bool useVAWTVolume = this->hasVAWTRotorVolume();
     const real rotorBoundingSmearingWidth = this->getRotorBoundingSmearingWidth();
     const real rotorBoundingMargin = this->getVAWTRotorBoundingMargin();
     const real rotorBoundingVolumeRadius =
-        useVAWTVolume ? c1o2 * this->diameter + rotorBoundingMargin
-                      : getRotorBoundingVolumeRadius(this->diameter, rotorBoundingSmearingWidth, false);
-    const real rotorBoundingVolumeHeight = this->vawtRotorHeight + c2o1 * rotorBoundingMargin;
+        (useVAWTVolume ? c1o2 * this->diameter + rotorBoundingMargin
+                       : getRotorBoundingVolumeRadius(this->diameter, rotorBoundingSmearingWidth, false))
+        + maxFloatingAmplitude;
+    const real rotorBoundingVolumeHeight = this->vawtRotorHeight + c2o1 * rotorBoundingMargin + c2o1 * maxFloatingAmplitude;
     const real deltaX = para->getScaledLengthRatio(level);
     const real effectiveRotorRadius = std::max(c0o1, rotorBoundingVolumeRadius - deltaX);
     const real rotorBoundingVolumeInnerRadius = std::max(c0o1, c1o2 * this->diameter - rotorBoundingMargin);
@@ -526,12 +529,14 @@ void ActuatorFarm::initBoundingVolumes()
             bool inRotorVolume = false;
             if (useVAWTVolume) {
                 inRotorVolume = inCylinderVolume<z, true>(nodeX, nodeY, nodeZ, turbinePosX, turbinePosY, turbinePosZ,
-                                                          this->vawtRotorHeight, c1o2 * this->diameter, rotorBoundingMargin);
+                                                          this->vawtRotorHeight, c1o2 * this->diameter,
+                                                          rotorBoundingMargin + maxFloatingAmplitude);
             } else {
                 const real distX = nodeX - turbinePosX;
                 const real distY = nodeY - turbinePosY;
                 const real distZ = nodeZ - turbinePosZ;
-                inRotorVolume = inSphereVolume(distX, distY, distZ, this->diameter, rotorBoundingSmearingWidth);
+                inRotorVolume = inSphereVolume(distX, distY, distZ, this->diameter,
+                                               rotorBoundingSmearingWidth + maxFloatingAmplitude);
             }
 
             if (inRotorVolume) {
@@ -560,8 +565,8 @@ void ActuatorFarm::initBoundingVolumes()
                 const real nodeY = para->getParH(level)->coordinateY[pos];
                 const real nodeZ = para->getParH(level)->coordinateZ[pos];
 
-                if (inCylinderVolume<x, false>(nodeX, nodeY, nodeZ, centerX + c1o2 * hubLength, centerY, centerZ, hubLength,
-                                               hubRadius, c3o2 * this->smearingWidth)) {
+                if (inCylinderVolume<x, false>(nodeX, nodeY, nodeZ, centerX + (c1o2 * hubLength), centerY, centerZ, hubLength,
+                                               hubRadius, c3o2 * this->smearingWidth + maxFloatingAmplitude)) {
                     nodesInBoundingVolumes.push_back((uint)pos);
                 }
             }
