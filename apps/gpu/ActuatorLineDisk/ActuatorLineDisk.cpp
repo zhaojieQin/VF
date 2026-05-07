@@ -370,6 +370,7 @@ void run(const vf::basics::ConfigurationFile& config)
         gridLevelForAlm,
         diskActuatorConfig.hubConfig,
         std::nullopt,
+        std::nullopt,
         diskActuatorConfig.hubDragCoefficient,
         diskActuatorConfig.hubSkinFrictionCoefficient,
         std::nullopt,

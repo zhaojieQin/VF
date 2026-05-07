@@ -237,7 +237,7 @@ void run(const vf::basics::ConfigurationFile& config)
     auto actuatorFarm = std::make_shared<ActuatorFarmStandalone>(
         para, cudaMemoryManager, rotorDiameter, actuatorPointsPerBlade, turbinePositionsX, turbinePositionsY,
         turbinePositionsZ, rotorSpeeds, smearingWidth, level, hubConfig, towerConfig,
-        hubDragCoeff, hubSkinFrictionCoeff, towerDragCoeff);
+        std::nullopt, hubDragCoeff, hubSkinFrictionCoeff, towerDragCoeff);
     para->addInteractor(actuatorFarm);
 
     actuatorFarm->enableOutput("ActuatorLineForcesAndVelocities", timeStepStartOutProbe, timeStepOutProbe);
