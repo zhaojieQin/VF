@@ -495,10 +495,9 @@ void ActuatorFarm::initBoundingVolumes()
     const real rotorBoundingSmearingWidth = this->getRotorBoundingSmearingWidth();
     const real rotorBoundingMargin = this->getVAWTRotorBoundingMargin();
     const real rotorBoundingVolumeRadius =
-        (useVAWTVolume ? c1o2 * this->diameter + rotorBoundingMargin
-                       : getRotorBoundingVolumeRadius(this->diameter, rotorBoundingSmearingWidth, false))
-        + maxFloatingAmplitude;
-    const real rotorBoundingVolumeHeight = this->vawtRotorHeight + c2o1 * rotorBoundingMargin + c2o1 * maxFloatingAmplitude;
+        (useVAWTVolume ? (c1o2 * this->diameter) + rotorBoundingMargin
+                       : getRotorBoundingVolumeRadius(this->diameter, rotorBoundingSmearingWidth, false) + maxFloatingAmplitude);
+    const real rotorBoundingVolumeHeight = this->vawtRotorHeight + c2o1 * rotorBoundingMargin;
     const real deltaX = para->getScaledLengthRatio(level);
     const real effectiveRotorRadius = std::max(c0o1, rotorBoundingVolumeRadius - deltaX);
     const real rotorBoundingVolumeInnerRadius = std::max(c0o1, c1o2 * this->diameter - rotorBoundingMargin);
@@ -529,7 +528,7 @@ void ActuatorFarm::initBoundingVolumes()
             if (useVAWTVolume) {
                 inRotorVolume = inCylinderVolume<z, true>(nodeX, nodeY, nodeZ, turbinePosX, turbinePosY, turbinePosZ,
                                                           this->vawtRotorHeight, c1o2 * this->diameter,
-                                                          rotorBoundingMargin + maxFloatingAmplitude);
+                                                          rotorBoundingMargin);
             } else {
                 const real distX = nodeX - turbinePosX;
                 const real distY = nodeY - turbinePosY;
