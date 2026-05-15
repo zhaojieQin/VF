@@ -120,7 +120,6 @@ public:
         maxFloatingAmplitude(std::hypot(floatingConfig ? floatingConfig->maximumAmplitudex : 0.0,
                                         floatingConfig ? floatingConfig->maximumAmplitudey : 0.0,
                                         floatingConfig ? floatingConfig->maximumAmplitudez : 0.0)),
-        // maxFloatingAmplitude(0.0),
         PreCollisionInteractor(std::move(para), std::move(cudaMemoryManager))
     {
         using namespace vf::basics::constant;
