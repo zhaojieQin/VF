@@ -74,6 +74,7 @@ struct TurbineData
     const real *posX, *posY, *posZ;
     const uint numberOfTurbines;
     const real smearingWidth;
+    const real floatingAmplitude;
 };
 
 struct ComponentData
@@ -205,7 +206,7 @@ __global__ void applyBodyForces(GridData gridData, const TurbineData turbineData
 
             if (inCylinderVolume<x, false>(gridCoordX, gridCoordY, gridCoordZ, centerX + c1o2 * componentData.hubLength,
                                            centerY, centerZ, componentData.hubLength, componentData.hubRadius,
-                                           c3o2 * turbineData.smearingWidth))
+                                           (c3o2 * turbineData.smearingWidth) + turbineData.floatingAmplitude))
                 accumulateSmearingForces<UseLocalSmearingWidth>(
                     componentData, gridCoordX, gridCoordY, gridCoordZ,
                     bladePointsTotal + turbine * componentData.numberOfHubPointsPerTurbine,
@@ -221,7 +222,7 @@ __global__ void applyBodyForces(GridData gridData, const TurbineData turbineData
 
             if (inCylinderVolume<z, false>(gridCoordX, gridCoordY, gridCoordZ, towerCenterX, towerCenterY,
                                            towerTopZ - c1o2 * componentData.maxTowerHeight, componentData.maxTowerHeight,
-                                           componentData.towerRadius, c3o2 * turbineData.smearingWidth))
+                                           componentData.towerRadius, (c3o2 * turbineData.smearingWidth) + turbineData.floatingAmplitude))
                 accumulateSmearingForces<UseLocalSmearingWidth>(
                     componentData, gridCoordX, gridCoordY, gridCoordZ,
                     bladePointsTotal + hubPointsTotal + turbine * componentData.numberOfTowerPointsPerTurbine,
@@ -317,10 +318,10 @@ void ActuatorFarm::interact(int level, uint t)
                               para->getScaledForceRatio(level) };
 
     const TurbineData turbineData { this->turbinePosXD, this->turbinePosYD, this->turbinePosZD, this->numberOfTurbines,
-                                    this->smearingWidth };
+                                    this->smearingWidth, maxFloatingAmplitude };
 
     const ComponentData componentData {
-        this->diameter,
+        this->diameter + (c2o1 * maxFloatingAmplitude),
         this->getVAWTRotorBoundingMargin(),
         this->numberOfBladePointsPerTurbine,
         this->getTotalNumberOfPoints(),
@@ -488,10 +489,6 @@ void ActuatorFarm::initIndices()
 void ActuatorFarm::initBoundingVolumes()
 {
     std::vector<uint> nodesInBoundingVolumes;
-
-    const real maxFloatingAmplitude = std::sqrt(floatingMaximumAmplitudex * floatingMaximumAmplitudex +
-                                                floatingMaximumAmplitudey * floatingMaximumAmplitudey +
-                                                floatingMaximumAmplitudez * floatingMaximumAmplitudez);
 
     // --- Rotor Bounding Volume ---
     const bool useVAWTVolume = this->hasVAWTRotorVolume();

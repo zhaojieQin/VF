@@ -117,6 +117,10 @@ public:
         floatingMaximumAmplitudex(floatingConfig ? floatingConfig->maximumAmplitudex : 0.0),
         floatingMaximumAmplitudey(floatingConfig ? floatingConfig->maximumAmplitudey : 0.0),
         floatingMaximumAmplitudez(floatingConfig ? floatingConfig->maximumAmplitudez : 0.0),
+        maxFloatingAmplitude(std::hypot(floatingConfig ? floatingConfig->maximumAmplitudex : 0.0,
+                                        floatingConfig ? floatingConfig->maximumAmplitudey : 0.0,
+                                        floatingConfig ? floatingConfig->maximumAmplitudez : 0.0)),
+        // maxFloatingAmplitude(0.0),
         PreCollisionInteractor(std::move(para), std::move(cudaMemoryManager))
     {
         using namespace vf::basics::constant;
@@ -349,6 +353,7 @@ protected:
     const real floatingMaximumAmplitudex;
     const real floatingMaximumAmplitudey;
     const real floatingMaximumAmplitudez;
+    const real maxFloatingAmplitude;
 
     bool writeOutput{false};
     std::string outputName;
