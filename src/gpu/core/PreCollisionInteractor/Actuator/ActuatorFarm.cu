@@ -74,12 +74,16 @@ struct TurbineData
     const real *posX, *posY, *posZ;
     const uint numberOfTurbines;
     const real smearingWidth;
-    const real floatingAmplitude;
+    const real floatingAmplitudeX;
+    const real floatingAmplitudeY;
+    const real floatingAmplitudeZ;
 };
 
 struct ComponentData
 {
-    const real referenceLength;
+    const real rotorBoundingRadiusX;
+    const real rotorBoundingRadiusY;
+    const real rotorBoundingRadiusZ;
     const real rotorBoundingMargin;
     const uint numberOfBladePointsPerTurbine;
     const uint totalNumberOfPoints;

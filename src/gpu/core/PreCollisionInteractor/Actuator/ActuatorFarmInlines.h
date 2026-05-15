@@ -110,6 +110,15 @@ constexpr bool inSphereVolume(real distX, real distY, real distZ, real diameter,
     return distSqrd(distX, distY, distZ) < boundingSphereRadius * boundingSphereRadius;
 }
 
+__host__ __device__ __inline__ bool inEllipsoidVolume(real distX, real distY, real distZ,
+                                                      real boundingRadiusX, real boundingRadiusY, real boundingRadiusZ)
+{
+    const real normalizedDistX = distX / boundingRadiusX;
+    const real normalizedDistY = distY / boundingRadiusY;
+    const real normalizedDistZ = distZ / boundingRadiusZ;
+    return normalizedDistX * normalizedDistX + normalizedDistY * normalizedDistY + normalizedDistZ * normalizedDistZ < real(1);
+}
+
 template <Axis CylinderAxis, bool UseDonut>
 __host__ __device__ __inline__ bool inCylinderVolume(real gridX, real gridY, real gridZ,
                                                      real centerX, real centerY, real centerZ,
