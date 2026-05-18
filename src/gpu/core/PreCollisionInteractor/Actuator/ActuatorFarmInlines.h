@@ -123,7 +123,7 @@ template <Axis CylinderAxis, bool UseDonut>
 __host__ __device__ __inline__ bool inCylinderVolume(real gridX, real gridY, real gridZ,
                                                      real centerX, real centerY, real centerZ,
                                                      real cylinderLength, real cylinderRadius,
-                                                     real margin)
+                                                     real axialMargin, real radialMargin)
 {
     using namespace vf::basics::constant;
 
@@ -153,21 +153,21 @@ __host__ __device__ __inline__ bool inCylinderVolume(real gridX, real gridY, rea
         radialCenter2 = centerY;
     }
 
-    const real axialMin = axialCenter - cylinderLength * c1o2 - margin;
-    const real axialMax = axialCenter + cylinderLength * c1o2 + margin;
+    const real axialMin = axialCenter - (cylinderLength * c1o2) - axialMargin;
+    const real axialMax = axialCenter + (cylinderLength * c1o2) + axialMargin;
 
     if (axialCoord < axialMin || axialCoord > axialMax)
         return false;
 
-    const real d1 = radial1 - radialCenter1;
-    const real d2 = radial2 - radialCenter2;
-    const real squaredRadialDist = d1 * d1 + d2 * d2;
+    const real radialDist1 = radial1 - radialCenter1;
+    const real radialDist2 = radial2 - radialCenter2;
+    const real squaredRadialDist = (radialDist1 * radialDist1) + (radialDist2 * radialDist2);
 
-    const real maxRadialDist = cylinderRadius + margin;
+    const real maxRadialDist = cylinderRadius + radialMargin;
 
     real minRadialDist;
     if constexpr (UseDonut)
-        minRadialDist = std::max(cylinderRadius - margin, real(0));
+        minRadialDist = std::max(cylinderRadius - radialMargin, real(0));
     else
         minRadialDist = c0o1;
 
