@@ -573,6 +573,8 @@ void ActuatorFarm::initBoundingVolumes()
         }
     }
 
+    const real hubRadialFloatingMargin   = std::hypot(this->floatingMaximumAmplitudey, this->floatingMaximumAmplitudez);
+    const real towerRadialFloatingMargin = std::hypot(this->floatingMaximumAmplitudex, this->floatingMaximumAmplitudey);
     // --- Hub Bounding Volume ---
     if (numberOfHubPoints > 0) {
         for (uint turbine = 0; turbine < numberOfTurbines; turbine++) {
@@ -588,7 +590,7 @@ void ActuatorFarm::initBoundingVolumes()
                 if (inCylinderVolume<x, false>(nodeX, nodeY, nodeZ, centerX + (c1o2 * hubLength), centerY, centerZ, hubLength,
                                                hubRadius,
                                                c3o2 * this->smearingWidth + this->floatingMaximumAmplitudex,
-                                               c3o2 * this->smearingWidth + std::hypot(this->floatingMaximumAmplitudey, this->floatingMaximumAmplitudez))) {
+                                               c3o2 * this->smearingWidth + hubRadialFloatingMargin)) {
                     nodesInBoundingVolumes.push_back((uint)pos);
                 }
             }
@@ -616,7 +618,7 @@ void ActuatorFarm::initBoundingVolumes()
                 if (inCylinderVolume<z, false>(nodeX, nodeY, nodeZ, towerCenterX, towerCenterY,
                                                towerTopZ - c1o2 * towerHeights[turbine], towerHeights[turbine], towerRadius,
                                                c3o2 * smearingWidth + this->floatingMaximumAmplitudez,
-                                               c3o2 * smearingWidth + std::hypot(this->floatingMaximumAmplitudex, this->floatingMaximumAmplitudey))) {
+                                               c3o2 * smearingWidth + towerRadialFloatingMargin)) {
                     nodesInBoundingVolumes.push_back((uint)pos);
                 }
             }
