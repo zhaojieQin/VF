@@ -123,11 +123,15 @@ __host__ __device__ __inline__ bool inRoundedBoxVolume(real distX, real distY, r
     return dx * dx + dy * dy + dz * dz < sphereRadius * sphereRadius;
 }
 
+// Minkowski sum of a floating-amplitude rectangle and a disk of radius (cylinderRadius + smearingRadius).
+// radialFloating1/2 are the maximum floating amplitudes in the two radial directions.
+// When both are zero this degenerates to the original circle check.
 template <Axis CylinderAxis, bool UseDonut>
 __host__ __device__ __inline__ bool inCylinderVolume(real gridX, real gridY, real gridZ,
                                                      real centerX, real centerY, real centerZ,
                                                      real cylinderLength, real cylinderRadius,
-                                                     real axialMargin, real radialMargin)
+                                                     real axialMargin,
+                                                     real radialFloating1, real radialFloating2, real smearingRadius)
 {
     using namespace vf::basics::constant;
 
@@ -165,18 +169,20 @@ __host__ __device__ __inline__ bool inCylinderVolume(real gridX, real gridY, rea
 
     const real radialDist1 = radial1 - radialCenter1;
     const real radialDist2 = radial2 - radialCenter2;
-    const real squaredRadialDist = (radialDist1 * radialDist1) + (radialDist2 * radialDist2);
+    const real r1 = std::max(c0o1, std::abs(radialDist1) - radialFloating1);
+    const real r2 = std::max(c0o1, std::abs(radialDist2) - radialFloating2);
+    const real squaredReducedRadialDist = r1 * r1 + r2 * r2;
 
-    const real maxRadialDist = cylinderRadius + radialMargin;
+    const real maxRadialDist = cylinderRadius + smearingRadius;
 
     real minRadialDist;
     if constexpr (UseDonut)
-        minRadialDist = std::max(cylinderRadius - radialMargin, real(0));
+        minRadialDist = std::max(c0o1, cylinderRadius - smearingRadius);
     else
         minRadialDist = c0o1;
 
-    return squaredRadialDist <= maxRadialDist * maxRadialDist &&
-           squaredRadialDist >= minRadialDist * minRadialDist;
+    return squaredReducedRadialDist <= maxRadialDist * maxRadialDist &&
+           squaredReducedRadialDist >= minRadialDist * minRadialDist;
 }
 
 __host__ __device__ __inline__ real gaussianSmearing(real distX, real distY, real distZ, real smearingWidth)

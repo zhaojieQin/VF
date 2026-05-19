@@ -77,8 +77,6 @@ struct TurbineData
     const real floatingAmplitudeX;
     const real floatingAmplitudeY;
     const real floatingAmplitudeZ;
-    const real hubRadialFloatingMargin;   // hypot(floatingAmplitudeY, floatingAmplitudeZ)
-    const real towerRadialFloatingMargin; // hypot(floatingAmplitudeX, floatingAmplitudeY)
 };
 
 struct ComponentData
@@ -188,7 +186,8 @@ __global__ void applyBodyForces(GridData gridData, const TurbineData turbineData
         if constexpr (UseVAWT) {
             isInRotorVolume = inCylinderVolume<z, true>(
                 gridCoordX, gridCoordY, gridCoordZ, turbinePosX, turbinePosY, turbinePosZ, componentData.vawtRotorHeight,
-                c1o2 * componentData.referenceLength, componentData.rotorBoundingMargin, componentData.rotorBoundingMargin);
+                c1o2 * componentData.referenceLength, componentData.rotorBoundingMargin,
+                c0o1, c0o1, componentData.rotorBoundingMargin);
         } else {
             const real distToHubX = gridCoordX - turbinePosX;
             const real distToHubY = gridCoordY - turbinePosY;
@@ -215,7 +214,8 @@ __global__ void applyBodyForces(GridData gridData, const TurbineData turbineData
             if (inCylinderVolume<x, false>(gridCoordX, gridCoordY, gridCoordZ, centerX + c1o2 * componentData.hubLength,
                                            centerY, centerZ, componentData.hubLength, componentData.hubRadius,
                                            (c3o2 * turbineData.smearingWidth) + turbineData.floatingAmplitudeX,
-                                           (c3o2 * turbineData.smearingWidth) + turbineData.hubRadialFloatingMargin))
+                                           turbineData.floatingAmplitudeY, turbineData.floatingAmplitudeZ,
+                                           c3o2 * turbineData.smearingWidth))
                 accumulateSmearingForces<UseLocalSmearingWidth>(
                     componentData, gridCoordX, gridCoordY, gridCoordZ,
                     bladePointsTotal + turbine * componentData.numberOfHubPointsPerTurbine,
@@ -233,7 +233,8 @@ __global__ void applyBodyForces(GridData gridData, const TurbineData turbineData
                                            towerTopZ - c1o2 * componentData.maxTowerHeight, componentData.maxTowerHeight,
                                            componentData.towerRadius,
                                            (c3o2 * turbineData.smearingWidth) + turbineData.floatingAmplitudeZ,
-                                           (c3o2 * turbineData.smearingWidth) + turbineData.towerRadialFloatingMargin))
+                                           turbineData.floatingAmplitudeX, turbineData.floatingAmplitudeY,
+                                           c3o2 * turbineData.smearingWidth))
                 accumulateSmearingForces<UseLocalSmearingWidth>(
                     componentData, gridCoordX, gridCoordY, gridCoordZ,
                     bladePointsTotal + hubPointsTotal + turbine * componentData.numberOfTowerPointsPerTurbine,
@@ -333,9 +334,7 @@ void ActuatorFarm::interact(int level, uint t)
                                     this->smearingWidth,
                                     this->floatingMaximumAmplitudex,
                                     this->floatingMaximumAmplitudey,
-                                    this->floatingMaximumAmplitudez,
-                                    std::hypot(this->floatingMaximumAmplitudey, this->floatingMaximumAmplitudez),
-                                    std::hypot(this->floatingMaximumAmplitudex, this->floatingMaximumAmplitudey) };
+                                    this->floatingMaximumAmplitudez };
 
     const ComponentData componentData {
         this->diameter,
@@ -545,7 +544,7 @@ void ActuatorFarm::initBoundingVolumes()
             if (useVAWTVolume) {
                 inRotorVolume = inCylinderVolume<z, true>(nodeX, nodeY, nodeZ, turbinePosX, turbinePosY, turbinePosZ,
                                                           this->vawtRotorHeight, c1o2 * this->diameter,
-                                                          rotorBoundingMargin, rotorBoundingMargin);
+                                                          rotorBoundingMargin, c0o1, c0o1, rotorBoundingMargin);
             } else {
                 const real distX = nodeX - turbinePosX;
                 const real distY = nodeY - turbinePosY;
@@ -571,8 +570,6 @@ void ActuatorFarm::initBoundingVolumes()
         }
     }
 
-    const real hubRadialFloatingMargin   = std::hypot(this->floatingMaximumAmplitudey, this->floatingMaximumAmplitudez);
-    const real towerRadialFloatingMargin = std::hypot(this->floatingMaximumAmplitudex, this->floatingMaximumAmplitudey);
     // --- Hub Bounding Volume ---
     if (numberOfHubPoints > 0) {
         for (uint turbine = 0; turbine < numberOfTurbines; turbine++) {
@@ -588,7 +585,8 @@ void ActuatorFarm::initBoundingVolumes()
                 if (inCylinderVolume<x, false>(nodeX, nodeY, nodeZ, centerX + (c1o2 * hubLength), centerY, centerZ, hubLength,
                                                hubRadius,
                                                c3o2 * this->smearingWidth + this->floatingMaximumAmplitudex,
-                                               c3o2 * this->smearingWidth + hubRadialFloatingMargin)) {
+                                               this->floatingMaximumAmplitudey, this->floatingMaximumAmplitudez,
+                                               c3o2 * this->smearingWidth)) {
                     nodesInBoundingVolumes.push_back((uint)pos);
                 }
             }
@@ -616,7 +614,8 @@ void ActuatorFarm::initBoundingVolumes()
                 if (inCylinderVolume<z, false>(nodeX, nodeY, nodeZ, towerCenterX, towerCenterY,
                                                towerTopZ - c1o2 * towerHeights[turbine], towerHeights[turbine], towerRadius,
                                                c3o2 * smearingWidth + this->floatingMaximumAmplitudez,
-                                               c3o2 * smearingWidth + towerRadialFloatingMargin)) {
+                                               this->floatingMaximumAmplitudex, this->floatingMaximumAmplitudey,
+                                               c3o2 * smearingWidth)) {
                     nodesInBoundingVolumes.push_back((uint)pos);
                 }
             }
