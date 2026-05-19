@@ -83,9 +83,7 @@ struct TurbineData
 
 struct ComponentData
 {
-    const real referenceLengthX;
-    const real referenceLengthY;
-    const real referenceLengthZ;
+    const real referenceLength;    // turbine diameter; used as c1o2*referenceLength to get rotor radius
     const real rotorBoundingMargin;
     const uint numberOfBladePointsPerTurbine;
     const uint totalNumberOfPoints;
@@ -190,15 +188,17 @@ __global__ void applyBodyForces(GridData gridData, const TurbineData turbineData
         if constexpr (UseVAWT) {
             isInRotorVolume = inCylinderVolume<z, true>(
                 gridCoordX, gridCoordY, gridCoordZ, turbinePosX, turbinePosY, turbinePosZ, componentData.vawtRotorHeight,
-                componentData.referenceLengthX, componentData.rotorBoundingMargin, componentData.rotorBoundingMargin);
+                c1o2 * componentData.referenceLength, componentData.rotorBoundingMargin, componentData.rotorBoundingMargin);
         } else {
             const real distToHubX = gridCoordX - turbinePosX;
             const real distToHubY = gridCoordY - turbinePosY;
             const real distToHubZ = gridCoordZ - turbinePosZ;
-            isInRotorVolume = inEllipsoidVolume(distToHubX, distToHubY, distToHubZ,
-                                                componentData.referenceLengthX,
-                                                componentData.referenceLengthY,
-                                                componentData.referenceLengthZ);
+            const real standardBoundingRadius = (c1o2 * componentData.referenceLength) + (c3o2 * turbineData.smearingWidth);
+            isInRotorVolume = inRoundedBoxVolume(distToHubX, distToHubY, distToHubZ,
+                                                 turbineData.floatingAmplitudeX,
+                                                 turbineData.floatingAmplitudeY,
+                                                 turbineData.floatingAmplitudeZ,
+                                                 standardBoundingRadius);
         }
 
         // --- Blade forces ---------------------------------
@@ -338,9 +338,7 @@ void ActuatorFarm::interact(int level, uint t)
                                     std::hypot(this->floatingMaximumAmplitudex, this->floatingMaximumAmplitudey) };
 
     const ComponentData componentData {
-        this->hasVAWTRotorVolume() ? (c1o2 * this->diameter) : (standardBoundingRadius + this->floatingMaximumAmplitudex),
-        this->hasVAWTRotorVolume() ? (c1o2 * this->diameter) : (standardBoundingRadius + this->floatingMaximumAmplitudey),
-        this->hasVAWTRotorVolume() ? (c1o2 * this->diameter) : (standardBoundingRadius + this->floatingMaximumAmplitudez),
+        this->diameter,
         this->getVAWTRotorBoundingMargin(),
         this->numberOfBladePointsPerTurbine,
         this->getTotalNumberOfPoints(),
@@ -514,24 +512,21 @@ void ActuatorFarm::initBoundingVolumes()
     const real rotorBoundingSmearingWidth = this->getRotorBoundingSmearingWidth();
     const real rotorBoundingMargin = this->getVAWTRotorBoundingMargin();
     const real standardBoundingRadius = getRotorBoundingVolumeRadius(this->diameter, rotorBoundingSmearingWidth, false);
-    const real rotorBoundingRadiusX = useVAWTVolume ? (c1o2 * this->diameter) : (standardBoundingRadius + this->floatingMaximumAmplitudex);
-    const real rotorBoundingRadiusY = useVAWTVolume ? (c1o2 * this->diameter) : (standardBoundingRadius + this->floatingMaximumAmplitudey);
-    const real rotorBoundingRadiusZ = useVAWTVolume ? (c1o2 * this->diameter) : (standardBoundingRadius + this->floatingMaximumAmplitudez);
+    const real rotorBoundingVolumeRadius =
+        useVAWTVolume ? ((c1o2 * this->diameter) + rotorBoundingMargin) : standardBoundingRadius;
     const real rotorBoundingVolumeHeight = this->vawtRotorHeight + c2o1 * rotorBoundingMargin;
     const real deltaX = para->getScaledLengthRatio(level);
-    const real effectiveRotorRadiusX = std::max(c0o1, rotorBoundingRadiusX - deltaX);
-    const real effectiveRotorRadiusY = std::max(c0o1, rotorBoundingRadiusY - deltaX);
-    const real effectiveRotorRadiusZ = std::max(c0o1, rotorBoundingRadiusZ - deltaX);
+    const real effectiveRotorRadius = std::max(c0o1, rotorBoundingVolumeRadius - deltaX);
     const real rotorBoundingVolumeInnerRadius = std::max(c0o1, c1o2 * this->diameter - rotorBoundingMargin);
     const real effectiveRotorInnerRadius =
         rotorBoundingVolumeInnerRadius > c0o1 ? std::max(c0o1, rotorBoundingVolumeInnerRadius + deltaX) : c0o1;
     const real effectiveRotorHeight = std::max(c0o1, rotorBoundingVolumeHeight - c2o1 * deltaX);
     const uint minimumNumberOfNodesPerRotorBoundingVolume =
         useVAWTVolume ? std::max(uint(1), uint(cPi *
-                                               std::max(c0o1, std::pow(effectiveRotorRadiusX, c2o1) -
+                                               std::max(c0o1, std::pow(effectiveRotorRadius, c2o1) -
                                                                   std::pow(effectiveRotorInnerRadius, c2o1)) *
                                                effectiveRotorHeight / std::pow(deltaX, c3o1)))
-                      : uint(c4o3 * cPi * effectiveRotorRadiusX * effectiveRotorRadiusY * effectiveRotorRadiusZ / std::pow(deltaX, c3o1));
+                      : uint(c4o3 * cPi * std::pow(effectiveRotorRadius, c3o1) / std::pow(deltaX, c3o1));
 
     for (uint turbine = 0; turbine < this->numberOfTurbines; turbine++) {
 
@@ -555,8 +550,11 @@ void ActuatorFarm::initBoundingVolumes()
                 const real distX = nodeX - turbinePosX;
                 const real distY = nodeY - turbinePosY;
                 const real distZ = nodeZ - turbinePosZ;
-                inRotorVolume = inEllipsoidVolume(distX, distY, distZ,
-                                                  rotorBoundingRadiusX, rotorBoundingRadiusY, rotorBoundingRadiusZ);
+                inRotorVolume = inRoundedBoxVolume(distX, distY, distZ,
+                                                   this->floatingMaximumAmplitudex,
+                                                   this->floatingMaximumAmplitudey,
+                                                   this->floatingMaximumAmplitudez,
+                                                   standardBoundingRadius);
             }
 
             if (inRotorVolume) {

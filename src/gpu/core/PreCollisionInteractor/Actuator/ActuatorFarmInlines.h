@@ -110,13 +110,17 @@ constexpr bool inSphereVolume(real distX, real distY, real distZ, real diameter,
     return distSqrd(distX, distY, distZ) < boundingSphereRadius * boundingSphereRadius;
 }
 
-__host__ __device__ __inline__ bool inEllipsoidVolume(real distX, real distY, real distZ,
-                                                      real boundingRadiusX, real boundingRadiusY, real boundingRadiusZ)
+// Minkowski sum of a floating-amplitude box and a sphere.
+// Conservative bounding volume for a sphere whose center can move within [-Ax,Ax] x [-Ay,Ay] x [-Az,Az].
+__host__ __device__ __inline__ bool inRoundedBoxVolume(real distX, real distY, real distZ,
+                                                       real floatingAmplitudeX, real floatingAmplitudeY, real floatingAmplitudeZ,
+                                                       real sphereRadius)
 {
-    const real normalizedDistX = distX / boundingRadiusX;
-    const real normalizedDistY = distY / boundingRadiusY;
-    const real normalizedDistZ = distZ / boundingRadiusZ;
-    return normalizedDistX * normalizedDistX + normalizedDistY * normalizedDistY + normalizedDistZ * normalizedDistZ < real(1);
+    using namespace vf::basics::constant;
+    const real dx = std::max(c0o1, std::abs(distX) - floatingAmplitudeX);
+    const real dy = std::max(c0o1, std::abs(distY) - floatingAmplitudeY);
+    const real dz = std::max(c0o1, std::abs(distZ) - floatingAmplitudeZ);
+    return dx * dx + dy * dy + dz * dz < sphereRadius * sphereRadius;
 }
 
 template <Axis CylinderAxis, bool UseDonut>
