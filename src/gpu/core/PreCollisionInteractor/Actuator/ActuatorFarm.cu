@@ -329,7 +329,6 @@ void ActuatorFarm::interact(int level, uint t)
                               para->getScaledVelocityRatio(level),
                               para->getScaledForceRatio(level) };
 
-    const real standardBoundingRadius = getRotorBoundingVolumeRadius(this->diameter, this->smearingWidth, false);
     const TurbineData turbineData { this->turbinePosXD, this->turbinePosYD, this->turbinePosZD, this->numberOfTurbines,
                                     this->smearingWidth,
                                     this->floatingMaximumAmplitudex,
