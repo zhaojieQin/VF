@@ -116,16 +116,15 @@ __host__ __device__ __inline__ bool inRoundedBoxVolume(real distX, real distY, r
                                                        real floatingAmplitudeX, real floatingAmplitudeY, real floatingAmplitudeZ,
                                                        real sphereRadius)
 {
-    using namespace vf::basics::constant;
-    const real dx = std::max(c0o1, std::abs(distX) - floatingAmplitudeX);
-    const real dy = std::max(c0o1, std::abs(distY) - floatingAmplitudeY);
-    const real dz = std::max(c0o1, std::abs(distZ) - floatingAmplitudeZ);
+    const real dx = std::max(real(0), std::abs(distX) - floatingAmplitudeX);
+    const real dy = std::max(real(0), std::abs(distY) - floatingAmplitudeY);
+    const real dz = std::max(real(0), std::abs(distZ) - floatingAmplitudeZ);
     return dx * dx + dy * dy + dz * dz < sphereRadius * sphereRadius;
 }
 
 // Minkowski sum of a floating-amplitude rectangle and a disk of radius (cylinderRadius + smearingRadius).
 // radialFloating1/2 are the maximum floating amplitudes in the two radial directions.
-// When both are zero this degenerates to the original circle check.
+// When both are real(0) this degenerates to the original circle check.
 template <Axis CylinderAxis, bool UseDonut>
 __host__ __device__ __inline__ bool inCylinderVolume(real gridX, real gridY, real gridZ,
                                                      real centerX, real centerY, real centerZ,
@@ -169,17 +168,17 @@ __host__ __device__ __inline__ bool inCylinderVolume(real gridX, real gridY, rea
 
     const real radialDist1 = radial1 - radialCenter1;
     const real radialDist2 = radial2 - radialCenter2;
-    const real r1 = std::max(c0o1, std::abs(radialDist1) - radialFloating1);
-    const real r2 = std::max(c0o1, std::abs(radialDist2) - radialFloating2);
+    const real r1 = std::max(real(0), std::abs(radialDist1) - radialFloating1);
+    const real r2 = std::max(real(0), std::abs(radialDist2) - radialFloating2);
     const real squaredReducedRadialDist = r1 * r1 + r2 * r2;
 
     const real maxRadialDist = cylinderRadius + smearingRadius;
 
     real minRadialDist;
     if constexpr (UseDonut)
-        minRadialDist = std::max(c0o1, cylinderRadius - smearingRadius);
+        minRadialDist = std::max(real(0), cylinderRadius - smearingRadius);
     else
-        minRadialDist = c0o1;
+        minRadialDist = real(0);
 
     return squaredReducedRadialDist <= maxRadialDist * maxRadialDist &&
            squaredReducedRadialDist >= minRadialDist * minRadialDist;
