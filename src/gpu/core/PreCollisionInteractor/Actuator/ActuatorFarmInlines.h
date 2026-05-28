@@ -110,27 +110,11 @@ constexpr bool inSphereVolume(real distX, real distY, real distZ, real diameter,
     return distSqrd(distX, distY, distZ) < boundingSphereRadius * boundingSphereRadius;
 }
 
-// Minkowski sum of a floating-amplitude box and a sphere.
-// Conservative bounding volume for a sphere whose center can move within [-Ax,Ax] x [-Ay,Ay] x [-Az,Az].
-__host__ __device__ __inline__ bool inRoundedBoxVolume(real distX, real distY, real distZ,
-                                                       real floatingAmplitudeX, real floatingAmplitudeY, real floatingAmplitudeZ,
-                                                       real sphereRadius)
-{
-    const real dx = std::max(real(0), std::abs(distX) - floatingAmplitudeX);
-    const real dy = std::max(real(0), std::abs(distY) - floatingAmplitudeY);
-    const real dz = std::max(real(0), std::abs(distZ) - floatingAmplitudeZ);
-    return dx * dx + dy * dy + dz * dz < sphereRadius * sphereRadius;
-}
-
-// Minkowski sum of a floating-amplitude rectangle and a disk of radius (cylinderRadius + smearingRadius).
-// radialFloating1/2 are the maximum floating amplitudes in the two radial directions.
-// When both are real(0) this degenerates to the original circle check.
 template <Axis CylinderAxis, bool UseDonut>
 __host__ __device__ __inline__ bool inCylinderVolume(real gridX, real gridY, real gridZ,
                                                      real centerX, real centerY, real centerZ,
                                                      real cylinderLength, real cylinderRadius,
-                                                     real axialMargin,
-                                                     real radialFloating1, real radialFloating2, real smearingRadius)
+                                                     real margin)
 {
     using namespace vf::basics::constant;
 
@@ -160,28 +144,26 @@ __host__ __device__ __inline__ bool inCylinderVolume(real gridX, real gridY, rea
         radialCenter2 = centerY;
     }
 
-    const real axialMin = axialCenter - (cylinderLength * c1o2) - axialMargin;
-    const real axialMax = axialCenter + (cylinderLength * c1o2) + axialMargin;
+    const real axialMin = axialCenter - cylinderLength * c1o2 - margin;
+    const real axialMax = axialCenter + cylinderLength * c1o2 + margin;
 
     if (axialCoord < axialMin || axialCoord > axialMax)
         return false;
 
-    const real radialDist1 = radial1 - radialCenter1;
-    const real radialDist2 = radial2 - radialCenter2;
-    const real r1 = std::max(real(0), std::abs(radialDist1) - radialFloating1);
-    const real r2 = std::max(real(0), std::abs(radialDist2) - radialFloating2);
-    const real squaredReducedRadialDist = r1 * r1 + r2 * r2;
+    const real d1 = radial1 - radialCenter1;
+    const real d2 = radial2 - radialCenter2;
+    const real squaredRadialDist = d1 * d1 + d2 * d2;
 
-    const real maxRadialDist = cylinderRadius + smearingRadius;
+    const real maxRadialDist = cylinderRadius + margin;
 
     real minRadialDist;
     if constexpr (UseDonut)
-        minRadialDist = std::max(real(0), cylinderRadius - smearingRadius);
+        minRadialDist = std::max(cylinderRadius - margin, real(0));
     else
-        minRadialDist = real(0);
+        minRadialDist = c0o1;
 
-    return squaredReducedRadialDist <= maxRadialDist * maxRadialDist &&
-           squaredReducedRadialDist >= minRadialDist * minRadialDist;
+    return squaredRadialDist <= maxRadialDist * maxRadialDist &&
+           squaredRadialDist >= minRadialDist * minRadialDist;
 }
 
 __host__ __device__ __inline__ real gaussianSmearing(real distX, real distY, real distZ, real smearingWidth)
