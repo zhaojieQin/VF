@@ -195,9 +195,12 @@ __global__ void applyBodyForces(GridData gridData, const TurbineData turbineData
         real distThreshold;
         if constexpr (HasTower) {
             distThreshold = componentData.maxTowerHeight + c3o2 * turbineData.smearingWidth;
-        } else {
-            const real hubReach = HasHub ? std::max(c0o1, componentData.hubLength - componentData.hubPositionOffset) : c0o1;
+        } else if constexpr (HasHub) {
+            const real hubLengthFromHub = componentData.hubLength - componentData.hubPositionOffset;
+            const real hubReach = hubLengthFromHub > c0o1 ? hubLengthFromHub : c0o1;
             distThreshold = std::max(c1o2 * componentData.referenceLength, hubReach) + c3o2 * turbineData.smearingWidth;
+        } else {
+            distThreshold = c1o2 * componentData.referenceLength + c3o2 * turbineData.smearingWidth;
         }
 
         if (distToHubX * distToHubX + distToHubY * distToHubY + distToHubZ * distToHubZ > distThreshold * distThreshold)
