@@ -61,6 +61,7 @@ struct GridData
 {
     const uint* indices;
     const uint nIndices;
+    const uint nIndicesPerTurbine;
     const real *coordsX, *coordsY, *coordsZ;
     const uint *neighborsX, *neighborsY, *neighborsZ, *neighborsWSB;
     const real *vx, *vy, *vz;
@@ -292,6 +293,7 @@ void ActuatorFarm::interact(int level, uint t)
 
     const GridData gridData { this->boundingVolumeIndicesD,
                               this->numberOfIndices,
+                              this->numberOfIndicesPerTurbine,
                               para->getParD(this->level)->coordinateX,
                               para->getParD(this->level)->coordinateY,
                               para->getParD(this->level)->coordinateZ,
