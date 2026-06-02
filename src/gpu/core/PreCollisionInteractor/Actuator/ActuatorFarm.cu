@@ -161,6 +161,7 @@ __global__ void applyBodyForces(GridData gridData, const TurbineData turbineData
     if (index >= gridData.nIndices)
         return;
 
+    const uint turbineIndex = index / gridData.nIndicesPerTurbine;
     const uint gridIndex = gridData.indices[index];
     const real gridCoordX = gridData.coordsX[gridIndex];
     const real gridCoordY = gridData.coordsY[gridIndex];
@@ -172,67 +173,59 @@ __global__ void applyBodyForces(GridData gridData, const TurbineData turbineData
 
     const uint bladePointsTotal = componentData.numberOfBladePointsPerTurbine * turbineData.numberOfTurbines;
 
-    for (uint turbine = 0; turbine < turbineData.numberOfTurbines; turbine++) {
+    const real turbinePosX = turbineData.posX[turbineIndex];
+    const real turbinePosY = turbineData.posY[turbineIndex];
+    const real turbinePosZ = turbineData.posZ[turbineIndex];
 
-        const real turbinePosX = turbineData.posX[turbine];
-        const real turbinePosY = turbineData.posY[turbine];
-        const real turbinePosZ = turbineData.posZ[turbine];
-
-        // --- Rotor bounding-volume check ---------------------
-        bool isInRotorVolume;
-        if constexpr (UseVAWT) {
-            isInRotorVolume = inCylinderVolume<z, true>(
-                gridCoordX, gridCoordY, gridCoordZ, turbinePosX, turbinePosY, turbinePosZ, componentData.vawtRotorHeight,
-                c1o2 * componentData.referenceLength, componentData.rotorBoundingMargin);
-        } else {
-            const real distToHubX = gridCoordX - turbinePosX;
-            const real distToHubY = gridCoordY - turbinePosY;
-            const real distToHubZ = gridCoordZ - turbinePosZ;
-            isInRotorVolume =
-                inSphereVolume(distToHubX, distToHubY, distToHubZ, componentData.referenceLength, turbineData.smearingWidth);
-        }
-
-        // --- Blade forces ---------------------------------
+    if constexpr (UseVAWT) {
+        const bool isInRotorVolume = inCylinderVolume<z, true>(
+            gridCoordX, gridCoordY, gridCoordZ, turbinePosX, turbinePosY, turbinePosZ, componentData.vawtRotorHeight,
+            c1o2 * componentData.referenceLength, componentData.rotorBoundingMargin);
         if (isInRotorVolume)
             accumulateSmearingForces<UseLocalSmearingWidth>(
-                componentData, gridCoordX, gridCoordY, gridCoordZ, turbine * componentData.numberOfBladePointsPerTurbine,
+                componentData, gridCoordX, gridCoordY, gridCoordZ,
+                turbineIndex * componentData.numberOfBladePointsPerTurbine,
                 componentData.numberOfBladePointsPerTurbine, turbineData.smearingWidth, gridForceX, gridForceY, gridForceZ);
+    } else {
+        const real distToHubX = gridCoordX - turbinePosX;
+        const real distToHubY = gridCoordY - turbinePosY;
+        const real distToHubZ = gridCoordZ - turbinePosZ;
+
+        real distThreshold;
+        if constexpr (HasTower) {
+            distThreshold = componentData.maxTowerHeight + c3o2 * turbineData.smearingWidth;
+        } else {
+            const real hubReach = HasHub ? std::max(c0o1, componentData.hubLength - componentData.hubPositionOffset) : c0o1;
+            distThreshold = std::max(c1o2 * componentData.referenceLength, hubReach) + c3o2 * turbineData.smearingWidth;
+        }
+
+        if (distToHubX * distToHubX + distToHubY * distToHubY + distToHubZ * distToHubZ > distThreshold * distThreshold)
+            return;
+
+        accumulateSmearingForces<UseLocalSmearingWidth>(
+            componentData, gridCoordX, gridCoordY, gridCoordZ,
+            turbineIndex * componentData.numberOfBladePointsPerTurbine,
+            componentData.numberOfBladePointsPerTurbine, turbineData.smearingWidth, gridForceX, gridForceY, gridForceZ);
 
         if constexpr (HasHub) {
-            const real centerX = turbinePosX - componentData.hubPositionOffset;
-            const real centerY = turbinePosY;
-            const real centerZ = turbinePosZ;
-
-            if (inCylinderVolume<x, false>(gridCoordX, gridCoordY, gridCoordZ, centerX + c1o2 * componentData.hubLength,
-                                           centerY, centerZ, componentData.hubLength, componentData.hubRadius,
-                                           (c3o2 * turbineData.smearingWidth) + turbineData.floatingAmplitude))
-                accumulateSmearingForces<UseLocalSmearingWidth>(
-                    componentData, gridCoordX, gridCoordY, gridCoordZ,
-                    bladePointsTotal + turbine * componentData.numberOfHubPointsPerTurbine,
-                    componentData.numberOfHubPointsPerTurbine, turbineData.smearingWidth, gridForceX, gridForceY,
-                    gridForceZ);
+            accumulateSmearingForces<UseLocalSmearingWidth>(
+                componentData, gridCoordX, gridCoordY, gridCoordZ,
+                bladePointsTotal + turbineIndex * componentData.numberOfHubPointsPerTurbine,
+                componentData.numberOfHubPointsPerTurbine, turbineData.smearingWidth, gridForceX, gridForceY, gridForceZ);
         }
 
         if constexpr (HasTower) {
-            const real towerCenterX = turbinePosX + componentData.towerOffset;
-            const real towerCenterY = turbinePosY;
-            const real towerTopZ = turbinePosZ - componentData.hubRadius;
             const uint hubPointsTotal = componentData.numberOfHubPointsPerTurbine * turbineData.numberOfTurbines;
-
-            if (inCylinderVolume<z, false>(gridCoordX, gridCoordY, gridCoordZ, towerCenterX, towerCenterY,
-                                           towerTopZ - c1o2 * componentData.maxTowerHeight, componentData.maxTowerHeight,
-                                           componentData.towerRadius, (c3o2 * turbineData.smearingWidth) + turbineData.floatingAmplitude))
-                accumulateSmearingForces<UseLocalSmearingWidth>(
-                    componentData, gridCoordX, gridCoordY, gridCoordZ,
-                    bladePointsTotal + hubPointsTotal + turbine * componentData.numberOfTowerPointsPerTurbine,
-                    componentData.numberOfTowerPointsPerTurbine, turbineData.smearingWidth, gridForceX, gridForceY,
-                    gridForceZ);
+            accumulateSmearingForces<UseLocalSmearingWidth>(
+                componentData, gridCoordX, gridCoordY, gridCoordZ,
+                bladePointsTotal + hubPointsTotal + turbineIndex * componentData.numberOfTowerPointsPerTurbine,
+                componentData.numberOfTowerPointsPerTurbine, turbineData.smearingWidth, gridForceX, gridForceY, gridForceZ);
         }
     }
 
-    gridData.fx[gridIndex] += gridForceX / gridData.forceRatio;
-    gridData.fy[gridIndex] += gridForceY / gridData.forceRatio;
-    gridData.fz[gridIndex] += gridForceZ / gridData.forceRatio;
+    atomicAdd(&gridData.fx[gridIndex], gridForceX / gridData.forceRatio);
+    atomicAdd(&gridData.fy[gridIndex], gridForceY / gridData.forceRatio);
+    atomicAdd(&gridData.fz[gridIndex], gridForceZ / gridData.forceRatio);
 }
 
 static void launchApplyBodyForces(bool useVAWT, bool hasHub, bool hasTower, bool UseLocalSmearingWidth,
@@ -316,11 +309,11 @@ void ActuatorFarm::interact(int level, uint t)
                               para->getScaledVelocityRatio(level),
                               para->getScaledForceRatio(level) };
 
-    const TurbineData turbineData { this->turbinePosXD, this->turbinePosYD, this->turbinePosZD, this->numberOfTurbines,
-                                    this->smearingWidth, maxFloatingAmplitude };
+    const TurbineData turbineData { this->turbinePosXD, this->turbinePosYD, this->turbinePosZD,
+                                    this->numberOfTurbines, this->smearingWidth, maxFloatingAmplitude };
 
     const ComponentData componentData {
-        this->diameter + (c2o1 * maxFloatingAmplitude),
+        this->diameter,
         this->getVAWTRotorBoundingMargin(),
         this->numberOfBladePointsPerTurbine,
         this->getTotalNumberOfPoints(),
