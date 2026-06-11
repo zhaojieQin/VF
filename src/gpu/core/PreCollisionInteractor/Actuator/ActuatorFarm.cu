@@ -29,16 +29,17 @@
 //! \addtogroup gpu_PreCollisionInteractor PreCollisionInteractor
 //! \ingroup gpu_core core
 //! \{
-//! \author Henrik Asmuth, Henry Korb, Daniel Sukhman
-//! \brief Adapted with the assistance of Claude Code (VSCode Extension). Reviewed and adapted by Daniel Sukhman.
+//! \author Henrik Asmuth, Henry Korb
 //======================================================================================
 #include "ActuatorFarm.h"
 #include "ActuatorFarmInlines.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cuda.h>
 #include <cuda_runtime.h>
 #include <helper_cuda.h>
+#include <limits>
 
 #include <basics/constants/NumericConstants.h>
 #include <basics/writer/WbWriterVtkXmlBinary.h>
@@ -61,7 +62,6 @@ struct GridData
 {
     const uint* indices;
     const uint nIndices;
-    const uint nIndicesPerTurbine;
     const real *coordsX, *coordsY, *coordsZ;
     const uint *neighborsX, *neighborsY, *neighborsZ, *neighborsWSB;
     const real *vx, *vy, *vz;
@@ -162,7 +162,6 @@ __global__ void applyBodyForces(GridData gridData, const TurbineData turbineData
     if (index >= gridData.nIndices)
         return;
 
-    const uint turbineIndex = index / gridData.nIndicesPerTurbine;
     const uint gridIndex = gridData.indices[index];
     const real gridCoordX = gridData.coordsX[gridIndex];
     const real gridCoordY = gridData.coordsY[gridIndex];
@@ -174,62 +173,67 @@ __global__ void applyBodyForces(GridData gridData, const TurbineData turbineData
 
     const uint bladePointsTotal = componentData.numberOfBladePointsPerTurbine * turbineData.numberOfTurbines;
 
-    const real turbinePosX = turbineData.posX[turbineIndex];
-    const real turbinePosY = turbineData.posY[turbineIndex];
-    const real turbinePosZ = turbineData.posZ[turbineIndex];
+    for (uint turbine = 0; turbine < turbineData.numberOfTurbines; turbine++) {
 
-    if constexpr (UseVAWT) {
-        const bool isInRotorVolume = inCylinderVolume<z, true>(
-            gridCoordX, gridCoordY, gridCoordZ, turbinePosX, turbinePosY, turbinePosZ, componentData.vawtRotorHeight,
-            c1o2 * componentData.referenceLength, componentData.rotorBoundingMargin);
+        const real turbinePosX = turbineData.posX[turbine];
+        const real turbinePosY = turbineData.posY[turbine];
+        const real turbinePosZ = turbineData.posZ[turbine];
+
+        // --- Rotor bounding-volume check ---------------------
+        bool isInRotorVolume;
+        if constexpr (UseVAWT) {
+            isInRotorVolume = inCylinderVolume<z, true>(
+                gridCoordX, gridCoordY, gridCoordZ, turbinePosX, turbinePosY, turbinePosZ, componentData.vawtRotorHeight,
+                c1o2 * componentData.referenceLength, componentData.rotorBoundingMargin);
+        } else {
+            const real distToHubX = gridCoordX - turbinePosX;
+            const real distToHubY = gridCoordY - turbinePosY;
+            const real distToHubZ = gridCoordZ - turbinePosZ;
+            isInRotorVolume =
+                inSphereVolume(distToHubX, distToHubY, distToHubZ, componentData.referenceLength, turbineData.smearingWidth);
+        }
+
+        // --- Blade forces ---------------------------------
         if (isInRotorVolume)
             accumulateSmearingForces<UseLocalSmearingWidth>(
-                componentData, gridCoordX, gridCoordY, gridCoordZ,
-                turbineIndex * componentData.numberOfBladePointsPerTurbine,
+                componentData, gridCoordX, gridCoordY, gridCoordZ, turbine * componentData.numberOfBladePointsPerTurbine,
                 componentData.numberOfBladePointsPerTurbine, turbineData.smearingWidth, gridForceX, gridForceY, gridForceZ);
-    } else {
-        const real distToHubX = gridCoordX - turbinePosX;
-        const real distToHubY = gridCoordY - turbinePosY;
-        const real distToHubZ = gridCoordZ - turbinePosZ;
-
-        real distThreshold;
-        if constexpr (HasTower) {
-            distThreshold = componentData.maxTowerHeight + c3o2 * turbineData.smearingWidth;
-        } else if constexpr (HasHub) {
-            const real hubLengthFromHub = componentData.hubLength - componentData.hubPositionOffset;
-            const real hubReach = hubLengthFromHub > c0o1 ? hubLengthFromHub : c0o1;
-            distThreshold = std::max(c1o2 * componentData.referenceLength, hubReach) + c3o2 * turbineData.smearingWidth;
-        } else {
-            distThreshold = c1o2 * componentData.referenceLength + c3o2 * turbineData.smearingWidth;
-        }
-
-        if (distToHubX * distToHubX + distToHubY * distToHubY + distToHubZ * distToHubZ > distThreshold * distThreshold)
-            return;
-
-        accumulateSmearingForces<UseLocalSmearingWidth>(
-            componentData, gridCoordX, gridCoordY, gridCoordZ,
-            turbineIndex * componentData.numberOfBladePointsPerTurbine,
-            componentData.numberOfBladePointsPerTurbine, turbineData.smearingWidth, gridForceX, gridForceY, gridForceZ);
 
         if constexpr (HasHub) {
-            accumulateSmearingForces<UseLocalSmearingWidth>(
-                componentData, gridCoordX, gridCoordY, gridCoordZ,
-                bladePointsTotal + turbineIndex * componentData.numberOfHubPointsPerTurbine,
-                componentData.numberOfHubPointsPerTurbine, turbineData.smearingWidth, gridForceX, gridForceY, gridForceZ);
+            const real centerX = turbinePosX - componentData.hubPositionOffset;
+            const real centerY = turbinePosY;
+            const real centerZ = turbinePosZ;
+
+            if (inCylinderVolume<x, false>(gridCoordX, gridCoordY, gridCoordZ, centerX + c1o2 * componentData.hubLength,
+                                           centerY, centerZ, componentData.hubLength, componentData.hubRadius,
+                                           (c3o2 * turbineData.smearingWidth) + turbineData.floatingAmplitude))
+                accumulateSmearingForces<UseLocalSmearingWidth>(
+                    componentData, gridCoordX, gridCoordY, gridCoordZ,
+                    bladePointsTotal + turbine * componentData.numberOfHubPointsPerTurbine,
+                    componentData.numberOfHubPointsPerTurbine, turbineData.smearingWidth, gridForceX, gridForceY,
+                    gridForceZ);
         }
 
         if constexpr (HasTower) {
+            const real towerCenterX = turbinePosX + componentData.towerOffset;
+            const real towerCenterY = turbinePosY;
+            const real towerTopZ = turbinePosZ - componentData.hubRadius;
             const uint hubPointsTotal = componentData.numberOfHubPointsPerTurbine * turbineData.numberOfTurbines;
-            accumulateSmearingForces<UseLocalSmearingWidth>(
-                componentData, gridCoordX, gridCoordY, gridCoordZ,
-                bladePointsTotal + hubPointsTotal + turbineIndex * componentData.numberOfTowerPointsPerTurbine,
-                componentData.numberOfTowerPointsPerTurbine, turbineData.smearingWidth, gridForceX, gridForceY, gridForceZ);
+
+            if (inCylinderVolume<z, false>(gridCoordX, gridCoordY, gridCoordZ, towerCenterX, towerCenterY,
+                                           towerTopZ - c1o2 * componentData.maxTowerHeight, componentData.maxTowerHeight,
+                                           componentData.towerRadius, (c3o2 * turbineData.smearingWidth) + turbineData.floatingAmplitude))
+                accumulateSmearingForces<UseLocalSmearingWidth>(
+                    componentData, gridCoordX, gridCoordY, gridCoordZ,
+                    bladePointsTotal + hubPointsTotal + turbine * componentData.numberOfTowerPointsPerTurbine,
+                    componentData.numberOfTowerPointsPerTurbine, turbineData.smearingWidth, gridForceX, gridForceY,
+                    gridForceZ);
         }
     }
 
-    atomicAdd(&gridData.fx[gridIndex], gridForceX / gridData.forceRatio);
-    atomicAdd(&gridData.fy[gridIndex], gridForceY / gridData.forceRatio);
-    atomicAdd(&gridData.fz[gridIndex], gridForceZ / gridData.forceRatio);
+    gridData.fx[gridIndex] += gridForceX / gridData.forceRatio;
+    gridData.fy[gridIndex] += gridForceY / gridData.forceRatio;
+    gridData.fz[gridIndex] += gridForceZ / gridData.forceRatio;
 }
 
 static void launchApplyBodyForces(bool useVAWT, bool hasHub, bool hasTower, bool UseLocalSmearingWidth,
@@ -296,7 +300,6 @@ void ActuatorFarm::interact(int level, uint t)
 
     const GridData gridData { this->boundingVolumeIndicesD,
                               this->numberOfIndices,
-                              this->numberOfIndicesPerTurbine,
                               para->getParD(this->level)->coordinateX,
                               para->getParD(this->level)->coordinateY,
                               para->getParD(this->level)->coordinateZ,
@@ -314,11 +317,11 @@ void ActuatorFarm::interact(int level, uint t)
                               para->getScaledVelocityRatio(level),
                               para->getScaledForceRatio(level) };
 
-    const TurbineData turbineData { this->turbinePosXD, this->turbinePosYD, this->turbinePosZD,
-                                    this->numberOfTurbines, this->smearingWidth, maxFloatingAmplitude };
+    const TurbineData turbineData { this->turbinePosXD, this->turbinePosYD, this->turbinePosZD, this->numberOfTurbines,
+                                    this->smearingWidth, maxFloatingAmplitude };
 
     const ComponentData componentData {
-        this->diameter,
+        this->diameter + (c2o1 * maxFloatingAmplitude),
         this->getVAWTRotorBoundingMargin(),
         this->numberOfBladePointsPerTurbine,
         this->getTotalNumberOfPoints(),
@@ -487,58 +490,32 @@ void ActuatorFarm::initBoundingVolumes()
 {
     std::vector<uint> nodesInBoundingVolumes;
 
+    // --- Rotor Bounding Volume ---
     const bool useVAWTVolume = this->hasVAWTRotorVolume();
-    const bool hasTower = !useVAWTVolume && this->numberOfTowerPointsPerTurbine > 0;
+    const real rotorBoundingSmearingWidth = this->getRotorBoundingSmearingWidth();
     const real rotorBoundingMargin = this->getVAWTRotorBoundingMargin();
+    const real rotorBoundingVolumeRadius =
+        (useVAWTVolume ? (c1o2 * this->diameter) + rotorBoundingMargin
+                       : getRotorBoundingVolumeRadius(this->diameter, rotorBoundingSmearingWidth, false) + maxFloatingAmplitude);
+    const real rotorBoundingVolumeHeight = this->vawtRotorHeight + c2o1 * rotorBoundingMargin;
     const real deltaX = para->getScaledLengthRatio(level);
-
-    if (hasTower)
-        maxTowerHeight = *std::max_element(towerHeights.begin(), towerHeights.end());
-
-    // Compute bounding volume sphere radius and minimum node count.
-    // VAWT: annular cylinder around rotor. HAWT with tower: half-sphere from tower bottom.
-    // HAWT no tower: full sphere at hub, sized to cover blade tips and any hub protrusion.
-    real rotorBoundingVolumeRadius;
-    uint minimumNumberOfNodesPerRotorBoundingVolume;
-
-    if (useVAWTVolume) {
-        rotorBoundingVolumeRadius = (c1o2 * this->diameter) + rotorBoundingMargin;
-        const real rotorBoundingVolumeHeight = this->vawtRotorHeight + c2o1 * rotorBoundingMargin;
-        const real effectiveRotorRadius = std::max(c0o1, rotorBoundingVolumeRadius - deltaX);
-        const real rotorBoundingVolumeInnerRadius = std::max(c0o1, c1o2 * this->diameter - rotorBoundingMargin);
-        const real effectiveRotorInnerRadius =
-            rotorBoundingVolumeInnerRadius > c0o1 ? std::max(c0o1, rotorBoundingVolumeInnerRadius + deltaX) : c0o1;
-        const real effectiveRotorHeight = std::max(c0o1, rotorBoundingVolumeHeight - c2o1 * deltaX);
-        minimumNumberOfNodesPerRotorBoundingVolume = std::max(uint(1), uint(cPi *
-            std::max(c0o1, std::pow(effectiveRotorRadius, c2o1) - std::pow(effectiveRotorInnerRadius, c2o1)) *
-            effectiveRotorHeight / std::pow(deltaX, c3o1)));
-    } else if (hasTower) {
-        rotorBoundingVolumeRadius = maxTowerHeight + c1o2 * this->diameter + c3o2 * this->smearingWidth;
-        const real effectiveRotorRadius = std::max(c0o1, rotorBoundingVolumeRadius - deltaX);
-        minimumNumberOfNodesPerRotorBoundingVolume =
-            uint(c2o3 * cPi * std::pow(effectiveRotorRadius, c3o1) / std::pow(deltaX, c3o1));
-    } else {
-        const real hubReach = this->numberOfHubPointsPerTurbine > 0
-            ? std::max(c0o1, this->hubLength - this->hubPositionOffset) : c0o1;
-        rotorBoundingVolumeRadius = std::max(c1o2 * this->diameter, hubReach) + c3o2 * this->smearingWidth;
-        const real effectiveRotorRadius = std::max(c0o1, rotorBoundingVolumeRadius - deltaX);
-        minimumNumberOfNodesPerRotorBoundingVolume =
-            uint(c4o3 * cPi * std::pow(effectiveRotorRadius, c3o1) / std::pow(deltaX, c3o1));
-    }
-
-    const real rotorBoundingVolumeRadiusSq = rotorBoundingVolumeRadius * rotorBoundingVolumeRadius;
-    uint nodesPerTurbineBoundingVolume = 0;
+    const real effectiveRotorRadius = std::max(c0o1, rotorBoundingVolumeRadius - deltaX);
+    const real rotorBoundingVolumeInnerRadius = std::max(c0o1, c1o2 * this->diameter - rotorBoundingMargin);
+    const real effectiveRotorInnerRadius =
+        rotorBoundingVolumeInnerRadius > c0o1 ? std::max(c0o1, rotorBoundingVolumeInnerRadius + deltaX) : c0o1;
+    const real effectiveRotorHeight = std::max(c0o1, rotorBoundingVolumeHeight - c2o1 * deltaX);
+    const uint minimumNumberOfNodesPerRotorBoundingVolume =
+        useVAWTVolume ? std::max(uint(1), uint(cPi *
+                                               std::max(c0o1, std::pow(effectiveRotorRadius, c2o1) -
+                                                                  std::pow(effectiveRotorInnerRadius, c2o1)) *
+                                               effectiveRotorHeight / std::pow(deltaX, c3o1)))
+                      : uint(c4o3 * cPi * std::pow(effectiveRotorRadius, c3o1) / std::pow(deltaX, c3o1));
 
     for (uint turbine = 0; turbine < this->numberOfTurbines; turbine++) {
 
         const real turbinePosX = this->turbinePosXH[turbine];
         const real turbinePosY = this->turbinePosYH[turbine];
         const real turbinePosZ = this->turbinePosZH[turbine];
-
-        // Centre of half-sphere for tower case (uses maxTowerHeight for uniform bounding volume size across turbines)
-        const real towerBottomCentreX = turbinePosX + this->towerOffset;
-        const real towerBottomCentreY = turbinePosY;
-        const real towerBottomCentreZ = turbinePosZ - this->hubRadius - maxTowerHeight;
 
         uint nodesInThisTurbineBoundingVolume = 0;
 
@@ -552,18 +529,12 @@ void ActuatorFarm::initBoundingVolumes()
                 inRotorVolume = inCylinderVolume<z, true>(nodeX, nodeY, nodeZ, turbinePosX, turbinePosY, turbinePosZ,
                                                           this->vawtRotorHeight, c1o2 * this->diameter,
                                                           rotorBoundingMargin);
-            } else if (hasTower) {
-                if (nodeZ >= towerBottomCentreZ) {
-                    const real distX = nodeX - towerBottomCentreX;
-                    const real distY = nodeY - towerBottomCentreY;
-                    const real distZ = nodeZ - towerBottomCentreZ;
-                    inRotorVolume = distX * distX + distY * distY + distZ * distZ <= rotorBoundingVolumeRadiusSq;
-                }
             } else {
                 const real distX = nodeX - turbinePosX;
                 const real distY = nodeY - turbinePosY;
                 const real distZ = nodeZ - turbinePosZ;
-                inRotorVolume = distX * distX + distY * distY + distZ * distZ <= rotorBoundingVolumeRadiusSq;
+                inRotorVolume = inSphereVolume(distX, distY, distZ, this->diameter,
+                                               rotorBoundingSmearingWidth + maxFloatingAmplitude);
             }
 
             if (inRotorVolume) {
@@ -578,19 +549,65 @@ void ActuatorFarm::initBoundingVolumes()
             throw std::runtime_error(
                 "ActuatorFarm::initBoundingVolumes: Turbine rotor bounding volume partially out of domain.");
         }
+    }
 
-        if (turbine == 0) {
-            nodesPerTurbineBoundingVolume = nodesInThisTurbineBoundingVolume;
-        } else if (nodesInThisTurbineBoundingVolume != nodesPerTurbineBoundingVolume) {
-            throw std::runtime_error(
-                "ActuatorFarm::initBoundingVolumes: Turbine " + std::to_string(turbine) + " has " +
-                std::to_string(nodesInThisTurbineBoundingVolume) + " bounding volume nodes but turbine 0 has " +
-                std::to_string(nodesPerTurbineBoundingVolume) +
-                ". All turbines in the farm must have equal bounding volume node counts.");
+    // --- Hub Bounding Volume ---
+    if (numberOfHubPoints > 0) {
+        for (uint turbine = 0; turbine < numberOfTurbines; turbine++) {
+            const real centerX = turbinePosXH[turbine] - hubPositionOffset;
+            const real centerY = turbinePosYH[turbine];
+            const real centerZ = turbinePosZH[turbine];
+
+            for (size_t pos = 1; pos <= para->getParH(level)->numberOfNodes; pos++) {
+                const real nodeX = para->getParH(level)->coordinateX[pos];
+                const real nodeY = para->getParH(level)->coordinateY[pos];
+                const real nodeZ = para->getParH(level)->coordinateZ[pos];
+
+                if (inCylinderVolume<x, false>(nodeX, nodeY, nodeZ, centerX + (c1o2 * hubLength), centerY, centerZ, hubLength,
+                                               hubRadius, c3o2 * this->smearingWidth + maxFloatingAmplitude)) {
+                    nodesInBoundingVolumes.push_back((uint)pos);
+                }
+            }
         }
     }
 
-    this->numberOfIndicesPerTurbine = nodesPerTurbineBoundingVolume;
+    // --- Tower Bounding Volume ---
+    if (numberOfTowerPoints > 0) {
+        maxTowerHeight = *std::max_element(towerHeights.begin(), towerHeights.end());
+        for (uint turbine = 0; turbine < numberOfTurbines; turbine++) {
+            const real towerCenterX = turbinePosXH[turbine] + towerOffset;
+            const real towerCenterY = turbinePosYH[turbine];
+            const real towerTopZ = turbinePosZH[turbine] - hubRadius;
+            const real towerBottomZ = towerTopZ - towerHeights[turbine];
+
+            real localMinZ = std::numeric_limits<real>::max();
+            for (size_t pos = 1; pos <= para->getParH(level)->numberOfNodes; pos++) {
+                const real nodeX = para->getParH(level)->coordinateX[pos];
+                const real nodeY = para->getParH(level)->coordinateY[pos];
+                const real nodeZ = para->getParH(level)->coordinateZ[pos];
+
+                if (std::abs(nodeX - towerCenterX) < deltaX && std::abs(nodeY - towerCenterY) < deltaX)
+                    localMinZ = std::min(localMinZ, nodeZ);
+
+                if (inCylinderVolume<z, false>(nodeX, nodeY, nodeZ, towerCenterX, towerCenterY,
+                                               towerTopZ - c1o2 * towerHeights[turbine], towerHeights[turbine], towerRadius,
+                                               c3o2 * smearingWidth + maxFloatingAmplitude)) {
+                    nodesInBoundingVolumes.push_back((uint)pos);
+                }
+            }
+
+            if (towerBottomZ < localMinZ)
+                throw std::runtime_error("ActuatorFarm::initBoundingVolumes: Tower of turbine " + std::to_string(turbine) +
+                                         " extends below the domain (tower bottom z = " + std::to_string(towerBottomZ) +
+                                         ", domain min z = " + std::to_string(localMinZ) +
+                                         "). Reduce the tower height so that it does not extend below the domain.");
+        }
+    }
+
+    std::sort(nodesInBoundingVolumes.begin(), nodesInBoundingVolumes.end());
+    nodesInBoundingVolumes.erase(std::unique(nodesInBoundingVolumes.begin(), nodesInBoundingVolumes.end()),
+                                 nodesInBoundingVolumes.end());
+
     this->numberOfIndices = uint(nodesInBoundingVolumes.size());
 
     cudaMemoryManager->cudaAllocBoundingVolumeIndices(this);

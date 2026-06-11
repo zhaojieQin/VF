@@ -336,7 +336,6 @@ protected:
     const real smearingWidth; // in m
     const int level;
     uint numberOfIndices{0};
-    uint numberOfIndicesPerTurbine{0};
     const uint numberOfBladePoints;
     const real vawtRotorHeight;
     const bool flagLocalSmearingWidth;
