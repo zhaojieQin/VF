@@ -196,8 +196,8 @@ struct Probe::GridParams
 };
 
 void removeInterpolationCells(std::vector<uint>& indices, Parameter* para, int level);
+void removeReceiveNodes(std::vector<uint>& indices, Parameter* para, int level);
 
 }
-
 #endif
 //! \}

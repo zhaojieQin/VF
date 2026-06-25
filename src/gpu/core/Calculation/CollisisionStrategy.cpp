@@ -132,6 +132,10 @@ void CollisionAndExchange_streams::operator()(UpdateGrid27 *updateGrid, Paramete
     }
     //! 4. exchange information between GPUs
     updateGrid->exchangeMultiGPU(level, CudaStreamIndex::SubDomainBorder);
+
+    //! 5. wait for both streams to finish to have coherent post collision state
+    cudaStreamSynchronize(para->getStreamManager()->getStream(CudaStreamIndex::SubDomainBorder));
+    cudaStreamSynchronize(para->getStreamManager()->getStream(CudaStreamIndex::Bulk));
 }
 
 }

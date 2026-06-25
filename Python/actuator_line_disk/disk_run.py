@@ -196,7 +196,7 @@ for thrust_coefficient in thrust_coefficients :
     disk_normal_coefficient = 4.0 * induction / (1.0 - induction)
     hub_drag_coefficient = disk_normal_coefficient
 
-    hub_config = gpu.HubConfig(0.0, center_radius, 0.0, 1)
+    hub_config = gpu.ActuatorFarm.HubConfig(0.0, center_radius, 0.0, 1)
     hub_skin_friction_coefficient = 0.0
 
     blade_radii = (0.5 * disk_diameter / number_of_actuator_line_points_per_blade) * (np.arange(number_of_actuator_line_points_per_blade, dtype=float) + 0.5)
@@ -249,7 +249,7 @@ for thrust_coefficient in thrust_coefficients :
     upper = lower + dx
     z0 = float(lower if (z_position_requested - lower) <= (upper - z_position_requested) else upper)
 
-    probe = gpu.probes.probe.Probe(
+    probe = gpu.probes.Probe(
         para,
         cuda_memory_manager,
         para.get_output_path(),

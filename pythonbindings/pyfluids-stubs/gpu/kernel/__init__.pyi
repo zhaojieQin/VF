@@ -33,3 +33,4 @@ r"""
 
 from . import compressible as compressible
 from . import incompressible as incompressible
+from . import advection_diffusion as advection_diffusion

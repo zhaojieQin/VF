@@ -50,5 +50,10 @@ namespace gpu_bindings::kernel
         incompressible.attr("BGK") = vf::collision_kernel::incompressible::BGK;
         incompressible.attr("BGKPlus") = vf::collision_kernel::incompressible::BGKPlus;
         incompressible.attr("CumulantK15") = vf::collision_kernel::incompressible::CumulantK15;
+
+        auto advection_diffusion = kernel_module.def_submodule("advection_diffusion", "Advection Diffusion Kernel types");
+        advection_diffusion.def_submodule("compressible").attr("F16") = vf::advectionDiffusionKernel::compressible::F16;
+        advection_diffusion.def_submodule("incompressible").attr("F16") = vf::advectionDiffusionKernel::incompressible::F16;
+
     }
 }

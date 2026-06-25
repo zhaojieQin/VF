@@ -207,8 +207,7 @@ public:
     real* getAllBladeForcesX() const { return this->forcesXH; };
     real* getAllBladeForcesY() const { return this->forcesYH; };
     real* getAllBladeForcesZ() const { return this->forcesZH; };
-    real* getAllBladeSmearingWidth() const { return this->localSmearingWidthH; };
-    real* getAllBladeLocalSmearingWidth() const { return this->getAllBladeSmearingWidth(); };
+    real* getAllBladeLocalSmearingWidth() const { return this->localSmearingWidthH; };
 
     real* getAllHubCoordsX() const { return numberOfHubPoints > 0 ? &this->coordsXH[this->numberOfBladePoints] : nullptr; };
     real* getAllHubCoordsY() const { return numberOfHubPoints > 0 ? &this->coordsYH[this->numberOfBladePoints] : nullptr; };
@@ -230,37 +229,47 @@ public:
     real* getAllTowerForcesY() const { return numberOfTowerPoints > 0 ? &this->forcesYH[this->numberOfBladePoints+this->numberOfHubPoints] : nullptr; };
     real* getAllTowerForcesZ() const { return numberOfTowerPoints > 0 ? &this->forcesZH[this->numberOfBladePoints+this->numberOfHubPoints] : nullptr; };
 
-    real* getAllBladeCoordsXDevice() const { return this->coordsXDCurrentTimestep; };
-    real* getAllBladeCoordsYDevice() const { return this->coordsYDCurrentTimestep; };
-    real* getAllBladeCoordsZDevice() const { return this->coordsZDCurrentTimestep; };
-    real* getAllBladeVelocitiesXDevice() const { return this->velocitiesXDCurrentTimestep; };
-    real* getAllBladeVelocitiesYDevice() const { return this->velocitiesYDCurrentTimestep; };
-    real* getAllBladeVelocitiesZDevice() const { return this->velocitiesZDCurrentTimestep; };
-    real* getAllBladeForcesXDevice() const { return this->forcesXDCurrentTimestep; };
-    real* getAllBladeForcesYDevice() const { return this->forcesYDCurrentTimestep; };
-    real* getAllBladeForcesZDevice() const { return this->forcesZDCurrentTimestep; };
-    real* getAllBladeSmearingWidthDevice() const { return this->localSmearingWidthDCurrentTimestep; };
-    real* getAllBladeLocalSmearingWidthDevice() const { return this->getAllBladeSmearingWidthDevice(); };
+    real* getAllCoordsXDevice() const { return this->coordsXDCurrentTimestep; };
+    real* getAllCoordsYDevice() const { return this->coordsYDCurrentTimestep; };
+    real* getAllCoordsZDevice() const { return this->coordsZDCurrentTimestep; };
+    real* getAllVelocitiesXDevice() const { return this->velocitiesXDCurrentTimestep; };
+    real* getAllVelocitiesYDevice() const { return this->velocitiesYDCurrentTimestep; };
+    real* getAllVelocitiesZDevice() const { return this->velocitiesZDCurrentTimestep; };
+    real* getAllForcesXDevice() const { return this->forcesXDCurrentTimestep; };
+    real* getAllForcesYDevice() const { return this->forcesYDCurrentTimestep; };
+    real* getAllForcesZDevice() const { return this->forcesZDCurrentTimestep; };
 
-    real* getAllHubCoordsXDevice() const { return numberOfHubPoints > 0 ? &this->coordsXDCurrentTimestep[numberOfBladePoints] : nullptr; };
-    real* getAllHubCoordsYDevice() const { return numberOfHubPoints > 0 ? &this->coordsYDCurrentTimestep[numberOfBladePoints] : nullptr; };
-    real* getAllHubCoordsZDevice() const { return numberOfHubPoints > 0 ? &this->coordsZDCurrentTimestep[numberOfBladePoints] : nullptr; };
-    real* getAllHubVelocitiesXDevice() const { return numberOfHubPoints > 0 ? &this->velocitiesXDCurrentTimestep[numberOfBladePoints] : nullptr; };
-    real* getAllHubVelocitiesYDevice() const { return numberOfHubPoints > 0 ? &this->velocitiesYDCurrentTimestep[numberOfBladePoints] : nullptr; };
-    real* getAllHubVelocitiesZDevice() const { return numberOfHubPoints > 0 ? &this->velocitiesZDCurrentTimestep[numberOfBladePoints] : nullptr; };
-    real* getAllHubForcesXDevice() const { return numberOfHubPoints > 0 ? &this->forcesXDCurrentTimestep[numberOfBladePoints] : nullptr; };
-    real* getAllHubForcesYDevice() const { return numberOfHubPoints > 0 ? &this->forcesYDCurrentTimestep[numberOfBladePoints] : nullptr; };
-    real* getAllHubForcesZDevice() const { return numberOfHubPoints > 0 ? &this->forcesZDCurrentTimestep[numberOfBladePoints] : nullptr; };
+    real* getAllBladeCoordsXDevice() const { return this->getAllCoordsXDevice(); };
+    real* getAllBladeCoordsYDevice() const { return this->getAllCoordsYDevice(); };
+    real* getAllBladeCoordsZDevice() const { return this->getAllCoordsZDevice(); };
+    real* getAllBladeVelocitiesXDevice() const { return this->getAllVelocitiesXDevice(); };
+    real* getAllBladeVelocitiesYDevice() const { return this->getAllVelocitiesYDevice(); };
+    real* getAllBladeVelocitiesZDevice() const { return this->getAllVelocitiesZDevice(); };
+    real* getAllBladeForcesXDevice() const { return this->getAllForcesXDevice(); };
+    real* getAllBladeForcesYDevice() const { return this->getAllForcesYDevice(); };
+    real* getAllBladeForcesZDevice() const { return this->getAllForcesZDevice(); };
+    real* getAllBladeLocalSmearingWidthDevice() const { return this->localSmearingWidthDCurrentTimestep; };
 
-    real* getAllTowerCoordsXDevice() const { return numberOfTowerPoints > 0 ? &this->coordsXDCurrentTimestep[numberOfBladePoints+numberOfHubPoints] : nullptr; };
-    real* getAllTowerCoordsYDevice() const { return numberOfTowerPoints > 0 ? &this->coordsYDCurrentTimestep[numberOfBladePoints+numberOfHubPoints] : nullptr; };
-    real* getAllTowerCoordsZDevice() const { return numberOfTowerPoints > 0 ? &this->coordsZDCurrentTimestep[numberOfBladePoints+numberOfHubPoints] : nullptr; };
-    real* getAllTowerVelocitiesXDevice() const { return numberOfTowerPoints > 0 ? &this->velocitiesXDCurrentTimestep[numberOfBladePoints+numberOfHubPoints] : nullptr; };
-    real* getAllTowerVelocitiesYDevice() const { return numberOfTowerPoints > 0 ? &this->velocitiesYDCurrentTimestep[numberOfBladePoints+numberOfHubPoints] : nullptr; };
-    real* getAllTowerVelocitiesZDevice() const { return numberOfTowerPoints > 0 ? &this->velocitiesZDCurrentTimestep[numberOfBladePoints+numberOfHubPoints] : nullptr; };
-    real* getAllTowerForcesXDevice() const { return numberOfTowerPoints > 0 ? &this->forcesXDCurrentTimestep[numberOfBladePoints+numberOfHubPoints] : nullptr; };
-    real* getAllTowerForcesYDevice() const { return numberOfTowerPoints > 0 ? &this->forcesYDCurrentTimestep[numberOfBladePoints+numberOfHubPoints] : nullptr; };
-    real* getAllTowerForcesZDevice() const { return numberOfTowerPoints > 0 ? &this->forcesZDCurrentTimestep[numberOfBladePoints+numberOfHubPoints] : nullptr; };
+
+    real* getAllHubCoordsXDevice() const { return numberOfHubPoints > 0 ? &this->getAllCoordsXDevice()[numberOfBladePoints] : nullptr; };
+    real* getAllHubCoordsYDevice() const { return numberOfHubPoints > 0 ? &this->getAllCoordsYDevice()[numberOfBladePoints] : nullptr; };
+    real* getAllHubCoordsZDevice() const { return numberOfHubPoints > 0 ? &this->getAllCoordsZDevice()[numberOfBladePoints] : nullptr; };
+    real* getAllHubVelocitiesXDevice() const { return numberOfHubPoints > 0 ? &this->getAllVelocitiesXDevice()[numberOfBladePoints] : nullptr; };
+    real* getAllHubVelocitiesYDevice() const { return numberOfHubPoints > 0 ? &this->getAllVelocitiesYDevice()[numberOfBladePoints] : nullptr; };
+    real* getAllHubVelocitiesZDevice() const { return numberOfHubPoints > 0 ? &this->getAllVelocitiesZDevice()[numberOfBladePoints] : nullptr; };
+    real* getAllHubForcesXDevice() const { return numberOfHubPoints > 0 ? &this->getAllForcesXDevice()[numberOfBladePoints] : nullptr; };
+    real* getAllHubForcesYDevice() const { return numberOfHubPoints > 0 ? &this->getAllForcesYDevice()[numberOfBladePoints] : nullptr; };
+    real* getAllHubForcesZDevice() const { return numberOfHubPoints > 0 ? &this->getAllForcesZDevice()[numberOfBladePoints] : nullptr; };
+
+    real* getAllTowerCoordsXDevice() const { return numberOfTowerPoints > 0 ? &this->getAllCoordsXDevice()[numberOfBladePoints+numberOfHubPoints] : nullptr; };
+    real* getAllTowerCoordsYDevice() const { return numberOfTowerPoints > 0 ? &this->getAllCoordsYDevice()[numberOfBladePoints+numberOfHubPoints] : nullptr; };
+    real* getAllTowerCoordsZDevice() const { return numberOfTowerPoints > 0 ? &this->getAllCoordsZDevice()[numberOfBladePoints+numberOfHubPoints] : nullptr; };
+    real* getAllTowerVelocitiesXDevice() const { return numberOfTowerPoints > 0 ? &this->getAllVelocitiesXDevice()[numberOfBladePoints+numberOfHubPoints] : nullptr; };
+    real* getAllTowerVelocitiesYDevice() const { return numberOfTowerPoints > 0 ? &this->getAllVelocitiesYDevice()[numberOfBladePoints+numberOfHubPoints] : nullptr; };
+    real* getAllTowerVelocitiesZDevice() const { return numberOfTowerPoints > 0 ? &this->getAllVelocitiesZDevice()[numberOfBladePoints+numberOfHubPoints] : nullptr; };
+    real* getAllTowerForcesXDevice() const { return numberOfTowerPoints > 0 ? &this->getAllForcesXDevice()[numberOfBladePoints+numberOfHubPoints] : nullptr; };
+    real* getAllTowerForcesYDevice() const { return numberOfTowerPoints > 0 ? &this->getAllForcesYDevice()[numberOfBladePoints+numberOfHubPoints] : nullptr; };
+    real* getAllTowerForcesZDevice() const { return numberOfTowerPoints > 0 ? &this->getAllForcesZDevice()[numberOfBladePoints+numberOfHubPoints] : nullptr; };
 
     void setAllBladeCoords(const real* bladeCoordsX, const real* bladeCoordsY, const real* bladeCoordsZ) const;
     void setAllBladeVelocities(const real* bladeVelocitiesX, const real* bladeVelocitiesY, const real* bladeVelocitiesZ) const;

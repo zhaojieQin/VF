@@ -62,7 +62,8 @@ namespace gpu_bindings::boundary_conditions
         .def("set_advection_diffusion_no_flux_boundary_condition", &BoundaryConditionFactory::setAdvectionDiffusionNoFluxBoundaryCondition, py::arg("boundary_condition_type"))
         .def("set_advection_diffusion_flux_boundary_condition", &BoundaryConditionFactory::setAdvectionDiffusionFluxBoundaryCondition, py::arg("boundary_condition_type"))
         .def("set_advection_diffusion_dirichlet_boundary_condition", &BoundaryConditionFactory::setAdvectionDiffusionDirichletBoundaryCondition, py::arg("boundary_condition_type"))
-        .def("set_advection_diffusion_neumann_boundary_condition", &BoundaryConditionFactory::setAdvectionDiffusionNeumannBoundaryCondition, py::arg("boundary_condition_type"));
+        .def("set_advection_diffusion_neumann_boundary_condition", &BoundaryConditionFactory::setAdvectionDiffusionNeumannBoundaryCondition, py::arg("boundary_condition_type"))
+        .def("set_advection_diffusion_directional_boundary_condition", &BoundaryConditionFactory::setAdvectionDiffusionDirectionalBoundaryCondition, py::arg("boundary_condition_type"));
 
         py::enum_<BoundaryConditionFactory::VelocityBC>(parentModule, "VelocityBC")
         .value("VelocityBounceBack", BoundaryConditionFactory::VelocityBC::VelocityBounceBack)
@@ -100,6 +101,7 @@ namespace gpu_bindings::boundary_conditions
         py::enum_<BoundaryConditionFactory::PrecursorBC>(parentModule, "PrecursorBC")
         .value("PrecursorNonReflectiveCompressible", BoundaryConditionFactory::PrecursorBC::PrecursorNonReflectiveCompressible)
         .value("PrecursorDistributions", BoundaryConditionFactory::PrecursorBC::PrecursorDistributions)
+        .value("PrecursorVelTemperatureDistributions", BoundaryConditionFactory::PrecursorBC::PrecursorVelTemperatureDistributions)
         .value("NotSpecified", BoundaryConditionFactory::PrecursorBC::NotSpecified);
 
         py::enum_<BoundaryConditionFactory::AdvectionDiffusionDirichletBC>(parentModule, "AdvectionDiffusionDirichletBC")
@@ -130,6 +132,10 @@ namespace gpu_bindings::boundary_conditions
         .value("SurfaceTemperature", BoundaryConditionFactory::SurfaceLayerBC::SurfaceTemperature)
         .value("SurfaceHeatFlux", BoundaryConditionFactory::SurfaceLayerBC::SurfaceHeatFlux)
         .value("NotSpecified", BoundaryConditionFactory::SurfaceLayerBC::NotSpecified);
+
+        py::enum_<BoundaryConditionFactory::AdvectionDiffusionDirectionalBC>(parentModule, "AdvectionDiffusionDirectionalBC")
+        .value("DirectionalOutflowNonReflecting", BoundaryConditionFactory::AdvectionDiffusionDirectionalBC::DirectionalOutflowNonReflecting)
+        .value("NotSpecified", BoundaryConditionFactory::AdvectionDiffusionDirectionalBC::NotSpecified);
 
 
     }

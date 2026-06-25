@@ -68,7 +68,9 @@ namespace gpu_bindings::actuator_farm
         using VAWTConfig = ActuatorFarm::VAWTConfig;
         using FloatingConfig = ActuatorFarm::FloatingConfig;
 
-        py::class_<HubConfig>(parentModule, "HubConfig")
+        auto actuatorFarm = py::class_<ActuatorFarm, PreCollisionInteractor, PyActuatorFarm, std::shared_ptr<ActuatorFarm>>(parentModule, "ActuatorFarm", py::dynamic_attr());
+
+        py::class_<HubConfig>(actuatorFarm, "HubConfig")
             .def(py::init<real, real, real, uint>(),
                 py::arg("length"),
                 py::arg("radius"),
@@ -79,7 +81,7 @@ namespace gpu_bindings::actuator_farm
             .def_readwrite("position_offset", &HubConfig::positionOffset)
             .def_readwrite("number_of_points_per_turbine", &HubConfig::numberOfPointsPerTurbine);
 
-        py::class_<TowerConfig>(parentModule, "TowerConfig")
+        py::class_<TowerConfig>(actuatorFarm, "TowerConfig")
             .def(py::init<real, real, std::vector<real>, uint>(),
                 py::arg("radius"),
                 py::arg("offset"),
@@ -90,7 +92,7 @@ namespace gpu_bindings::actuator_farm
             .def_readwrite("tower_heights", &TowerConfig::towerHeights)
             .def_readwrite("number_of_points_per_turbine", &TowerConfig::numberOfPointsPerTurbine);
 
-        py::class_<VAWTConfig>(parentModule, "VAWTConfig")
+        py::class_<VAWTConfig>(actuatorFarm, "VAWTConfig")
             .def(py::init([](real rotorHeight, bool flagLocalSmearingWidth) {
                 return VAWTConfig{rotorHeight, flagLocalSmearingWidth};
             }),
@@ -99,7 +101,7 @@ namespace gpu_bindings::actuator_farm
             .def_readwrite("rotor_height", &VAWTConfig::rotorHeight)
             .def_readwrite("flag_local_smearing_width", &VAWTConfig::flagLocalSmearingWidth);
 
-        py::class_<FloatingConfig>(parentModule, "FloatingConfig")
+        py::class_<FloatingConfig>(actuatorFarm, "FloatingConfig")
             .def(py::init<real, real, real>(),
                 py::arg("maximum_amplitude_x"),
                 py::arg("maximum_amplitude_y"),
@@ -108,8 +110,7 @@ namespace gpu_bindings::actuator_farm
             .def_readwrite("maximum_amplitude_y", &FloatingConfig::maximumAmplitudey)
             .def_readwrite("maximum_amplitude_z", &FloatingConfig::maximumAmplitudez);
 
-        py::class_<ActuatorFarm, PreCollisionInteractor, PyActuatorFarm, std::shared_ptr<ActuatorFarm>>(parentModule, "ActuatorFarm", py::dynamic_attr())
-        .def(py::init<  SPtr<Parameter>,
+        actuatorFarm.def(py::init<  SPtr<Parameter>,
                         SPtr<CudaMemoryManager>,
                         const real,
                         const std::vector<real>&,
@@ -140,14 +141,14 @@ namespace gpu_bindings::actuator_farm
                         py::arg("vawt_config") = py::none(),
                         py::arg("floating_config") = py::none())
         .def_property_readonly("number_of_points_per_blade", &ActuatorFarm::getNumberOfPointsPerBlade)
+        .def_property_readonly("number_of_blades_per_turbine", &ActuatorFarm::getNumberOfBladesPerTurbine)
         .def_property_readonly("number_of_turbines", &ActuatorFarm::getNumberOfTurbines)
         .def_property_readonly("number_of_blade_points_per_turbine", &ActuatorFarm::getNumberOfBladePointsPerTurbine)
-        .def_property_readonly("number_of_blades_per_turbine", &ActuatorFarm::getNumberOfBladesPerTurbine)
         .def_property_readonly("number_of_blade_points", &ActuatorFarm::getNumberOfBladePoints)
-        .def_property_readonly("number_of_indices", &ActuatorFarm::getNumberOfIndices)
         .def_property_readonly("total_number_of_points", &ActuatorFarm::getTotalNumberOfPoints)
         .def_property_readonly("number_of_hub_points", &ActuatorFarm::getNumberOfHubPoints)
         .def_property_readonly("number_of_tower_points", &ActuatorFarm::getNumberOfTowerPoints)
+        .def_property_readonly("number_of_indices", &ActuatorFarm::getNumberOfIndices)
 
         .def("get_turbine_pos", [](ActuatorFarm& al, uint turbine){ 
             real position[3] = {al.getTurbinePosX(turbine), al.getTurbinePosY(turbine), al.getTurbinePosZ(turbine)}; return arr(3,  position);
@@ -165,6 +166,16 @@ namespace gpu_bindings::actuator_farm
         .def("get_all_blade_forces_x", [](ActuatorFarm& al){ return arr({al.getNumberOfTurbines(), al.getNumberOfBladesPerTurbine(), al.getNumberOfPointsPerBlade()}, al.getAllBladeForcesX()); } )
         .def("get_all_blade_forces_y", [](ActuatorFarm& al){ return arr({al.getNumberOfTurbines(), al.getNumberOfBladesPerTurbine(), al.getNumberOfPointsPerBlade()}, al.getAllBladeForcesY()); } )
         .def("get_all_blade_forces_z", [](ActuatorFarm& al){ return arr({al.getNumberOfTurbines(), al.getNumberOfBladesPerTurbine(), al.getNumberOfPointsPerBlade()}, al.getAllBladeForcesZ()); } )
+
+        .def("get_all_coords_x_device", [](ActuatorFarm& al) -> intptr_t { return arr_to_cp(al.getAllCoordsXDevice()); } )
+        .def("get_all_coords_y_device", [](ActuatorFarm& al) -> intptr_t { return arr_to_cp(al.getAllCoordsYDevice()); } )
+        .def("get_all_coords_z_device", [](ActuatorFarm& al) -> intptr_t { return arr_to_cp(al.getAllCoordsZDevice()); } )        
+        .def("get_all_velocities_x_device", [](ActuatorFarm& al) -> intptr_t { return arr_to_cp(al.getAllVelocitiesXDevice()); } )
+        .def("get_all_velocities_y_device", [](ActuatorFarm& al) -> intptr_t { return arr_to_cp(al.getAllVelocitiesYDevice()); } )
+        .def("get_all_velocities_z_device", [](ActuatorFarm& al) -> intptr_t { return arr_to_cp(al.getAllVelocitiesZDevice()); } )
+        .def("get_all_forces_x_device", [](ActuatorFarm& al) -> intptr_t { return arr_to_cp(al.getAllForcesXDevice()); } )
+        .def("get_all_forces_y_device", [](ActuatorFarm& al) -> intptr_t { return arr_to_cp(al.getAllForcesYDevice()); } )
+        .def("get_all_forces_z_device", [](ActuatorFarm& al) -> intptr_t { return arr_to_cp(al.getAllForcesZDevice()); } )
 
         .def("get_all_blade_coords_x_device", [](ActuatorFarm& al) -> intptr_t { return arr_to_cp(al.getAllBladeCoordsXDevice()); } )
         .def("get_all_blade_coords_y_device", [](ActuatorFarm& al) -> intptr_t { return arr_to_cp(al.getAllBladeCoordsYDevice()); } )

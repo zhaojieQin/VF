@@ -1,3 +1,4 @@
+
 r"""
 =======================================================================================
  ____          ____    __    ______     __________   __      __       __        __
@@ -33,18 +34,47 @@ r"""
 
 from __future__ import annotations
 
-import enum
-from ... import gpu
-from ...basics.geometry3d import Axis
+from enum import Enum
+from .. import gpu
+from ..basics.geometry3d import Axis
 
-class Statistic(enum.Enum):
-    _value_: int
-    Means = ...
-    Covariances = ...
-    Skewness = ...
-    Flatness = ...
+class Probe(gpu.Sampler):
+    class Statistic(Enum):
+        _value_: int
+        Instantaneous = ...
+        Means = ...
+        Variances = ...
+    def __init__(
+        self,
+        para: gpu.Parameter,
+        cuda_memory_manager: gpu.CudaMemoryManager,
+        output_path: str,
+        probe_name: str,
+        t_start_avg: int,
+        t_avg: int,
+        t_start_out: int,
+        t_out: int,
+        output_timeseries: bool,
+        average_every_timestep: bool,
+        sample_scalar: bool = ...
+    ) -> None: ...
+    def add_statistic(self, variable: Statistic) -> None: ...
+    def add_all_available_statistics(self) -> None: ...
+    def add_probe_point(self, point_coord_x: float, point_coord_y: float, point_coord_z: float) -> None: ...
+    def add_probe_points_from_list(
+        self, point_coords_x: list[float], point_coords_y: list[float], point_coords_z: list[float]
+    ) -> None: ...
+    def set_probe_plane(
+        self, pos_x: float, pos_y: float, pos_z: float, delta_x: float, delta_y: float, delta_z: float
+    ) -> None: ...
 
 class PlanarAverageProbe(gpu.Sampler):
+    class Statistic(Enum):
+        _value_: int
+        Means = ...
+        Covariances = ...
+        Skewness = ...
+        Flatness = ...
     def __init__(
         self,
         para: gpu.Parameter,
@@ -64,3 +94,22 @@ class PlanarAverageProbe(gpu.Sampler):
     def add_statistic(self, variable: Statistic) -> None: ...
     def add_all_available_statistics(self) -> None: ...
     def set_file_name_to_n_out(self) -> None: ...
+
+class WallModelProbe(gpu.Sampler):
+    def __init__(
+        self,
+        para: gpu.Parameter,
+        cuda_memory_manager: gpu.CudaMemoryManager,
+        output_path: str,
+        probe_name: str,
+        t_start_avg: int,
+        t_start_tmp_avg: int,
+        t_avg: int,
+        t_start_out: int,
+        t_out: int,
+        average_every_timestep: bool,
+        compute_temporal_averages: bool,
+        output_stress: bool,
+        evaluate_pressure_gradient: bool,
+        sample_surface_layer: bool,
+    ) -> None: ...

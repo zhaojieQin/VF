@@ -52,7 +52,7 @@ def load_config_file(config_file: Path):
 
 def add_plane_probes(plane_locs: np.ndarray, para: gpu.Parameter, cuda_memory_manager: gpu.CudaMemoryManager, t_start_averaging: float, t_start_out_probe: float, t_out_probe: float, dt: float, dx: float, length: np.ndarray):
     for n_probe, probe_pos in enumerate(plane_locs):
-        plane_probe = gpu.probes.probe.Probe(para, cuda_memory_manager, para.get_output_path(), f"planeProbe_{n_probe+1}", int(t_start_averaging/dt), 10, int(t_start_out_probe/dt), int(t_out_probe/dt), False, False)
+        plane_probe = gpu.probes.Probe(para, cuda_memory_manager, para.get_output_path(), f"planeProbe_{n_probe+1}", int(t_start_averaging/dt), 10, int(t_start_out_probe/dt), int(t_out_probe/dt), False, False)
         plane_probe.set_probe_plane(probe_pos, -length[1]/2, -length[2]/2, dx, length[1], length[2])
         plane_probe.add_all_available_statistics()
         para.add_sampler(plane_probe)

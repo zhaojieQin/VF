@@ -28,43 +28,39 @@
 //
 //! \author Henry Korb
 //=======================================================================================
+#include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
-#include <pybind11/numpy.h>
-#include <gpu/core/Samplers/Sampler.h>
+
 #include <gpu/core/Samplers/PrecursorWriter.h>
+#include <gpu/core/Samplers/Sampler.h>
 
 namespace gpu_bindings::precursor_writer
 {
-    namespace py = pybind11;
-    using namespace vf::gpu;
+namespace py = pybind11;
+using namespace vf::gpu;
 
-    inline void makeModule(py::module_ &parentModule)
-    {
-        py::enum_<PrecursorWriter::OutputVariable>(parentModule, "OutputVariable")
+inline void makeModule(py::module_ &parentModule)
+{
+    py::enum_<PrecursorWriter::OutputVariable>(parentModule, "OutputVariable")
         .value("Velocities", PrecursorWriter::OutputVariable::Velocities)
         .value("Distributions", PrecursorWriter::OutputVariable::Distributions);
 
-        py::class_<PrecursorWriter, Sampler, std::shared_ptr<PrecursorWriter>>(parentModule, "PrecursorWriter")
-        .def(py::init < SPtr<Parameter>,
-                        SPtr<CudaMemoryManager>,
-                        std::string,
-                        std::string,
-                        real,
-                        real, real,
-                        real, real,
-                        uint, uint, 
-                        PrecursorWriter::OutputVariable, 
-                        uint>(),
-                        py::arg("para"),
-                        py::arg("cuda_memory_manager"),
-                        py::arg("output_path"),
-                        py::arg("filename"),
-                        py::arg("x_pos"),
-                        py::arg("y_min"), py::arg("y_max"),
-                        py::arg("z_min"), py::arg("z_max"),
-                        py::arg("t_start_out"), py::arg("t_save"), 
-                        py::arg("output_variable"), 
-                        py::arg("max_timesteps_per_file"));
-    }
+    py::enum_<PrecursorWriter::OutputVariableTemperature>(parentModule, "OutputVariableTemperature")
+        .value("Velocities", PrecursorWriter::OutputVariableTemperature::Temperature)
+        .value("Distributions", PrecursorWriter::OutputVariableTemperature::Distributions);
+
+    py::class_<PrecursorWriter, Sampler, std::shared_ptr<PrecursorWriter>>(parentModule, "PrecursorWriter")
+        .def(py::init<SPtr<Parameter>, SPtr<CudaMemoryManager>, std::string, std::string, real, real, real, real, real, uint,
+                      uint, PrecursorWriter::OutputVariable, uint>(),
+             py::arg("para"), py::arg("cuda_memory_manager"), py::arg("output_path"), py::arg("filename"), py::arg("x_pos"),
+             py::arg("y_min"), py::arg("y_max"), py::arg("z_min"), py::arg("z_max"), py::arg("t_start_out"),
+             py::arg("t_save"), py::arg("output_variable"), py::arg("max_timesteps_per_file"))
+        .def(py::init<SPtr<Parameter>, SPtr<CudaMemoryManager>, std::string, std::string, real, real, real, real, real, uint,
+                      uint, PrecursorWriter::OutputVariable, PrecursorWriter::OutputVariableTemperature, uint>(),
+             py::arg("para"), py::arg("cuda_memory_manager"), py::arg("output_path"), py::arg("filename"), py::arg("x_pos"),
+             py::arg("y_min"), py::arg("y_max"), py::arg("z_min"), py::arg("z_max"), py::arg("t_start_out"),
+             py::arg("t_save"), py::arg("output_variable"), py::arg("output_variable_temperature"),
+             py::arg("max_timesteps_per_file"));
 }
+} // namespace precursor_writer
