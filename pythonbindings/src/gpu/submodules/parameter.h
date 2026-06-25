@@ -28,7 +28,7 @@
 //
 //! \author Henry Korb
 //=======================================================================================
-#include <cmath>
+#include <random>
 
 #include <pybind11/functional.h>
 #include <pybind11/pybind11.h>
@@ -69,9 +69,12 @@ namespace gpu_bindings::parameter
             .def("set_print_files", &Parameter::setPrintFiles, py::arg("print_files"))
             .def("set_viscosity_LB", &Parameter::setViscosityLB, py::arg("viscosity"))
             .def("set_velocity_LB", &Parameter::setVelocityLB, py::arg("velocity"))
+            .def("set_diffusivity_LB", &Parameter::setDiffusivity, py::arg("diffusivity"))
             .def("set_viscosity_ratio", &Parameter::setViscosityRatio, py::arg("viscosity_ratio"))
             .def("set_velocity_ratio", &Parameter::setVelocityRatio, py::arg("velocity_ratio"))
             .def("set_density_ratio", &Parameter::setDensityRatio, py::arg("density_ratio"))
+            .def("set_buoyancy_factor", &Parameter::setBuoyancyFactor, py::arg("buoyancy_factor"))
+            .def("set_reference_temperature", &Parameter::setReferenceTemperature, py::arg("reference_temperature"))
             .def("set_devices", &Parameter::setDevices, py::arg("devices"))
             .def("set_max_dev", &Parameter::setMaxDev, py::arg("max_dev"))
             .def("set_is_body_force", &Parameter::setIsBodyForce, py::arg("is_body_force"))
@@ -128,7 +131,22 @@ namespace gpu_bindings::parameter
                     });
                 },
                 py::arg("u_star"), py::arg("z0"), py::arg("length_x"), py::arg("length_z"), py::arg("height"), py::arg("velocity_ratio"))
-            .def("set_initial_condition_AD_uniform", [](Parameter& para, real concentration) { para.setInitialConditionAD([concentration](real, real, real) { return concentration; }); })
+            .def("set_initial_condition_AD_uniform", [](Parameter& para, real concentration) { para.setInitialConditionAD([concentration](real, real, real) { return concentration; }); }, py::arg("concentration"))
+            .def("set_initial_condition_AD_constant_gradient", [](Parameter& para, real concentrationAtGround, real gradient) { para.setInitialConditionAD([concentrationAtGround, gradient](real, real, real z) { return concentrationAtGround + gradient*z; }); }, py::arg("concentration_at_ground"), py::arg("gradient"))
+            .def(
+                "add_perturbation_to_initial_condition_AD", 
+                [](Parameter& para, real perturbationStrength, real maximumHeightOfPerturbation) {
+                    auto unPerturbedFunction = para.getInitialConditionAD();
+                    para.setInitialConditionAD([=](real x, real y, real z){
+                        const real unPerturbedValue = unPerturbedFunction(x,y,z);
+                    static std::uniform_real_distribution<real> distribution(-perturbationStrength, perturbationStrength);
+                    static std::default_random_engine engine(42);
+                    if(z < maximumHeightOfPerturbation)
+                        return unPerturbedValue + distribution(engine);
+                    return unPerturbedValue;
+                    });
+                }, 
+                py::arg("perturbation_strength"), py::arg("maximum_height_of_perturbation"))
             .def("set_initial_reference_temperature_uniform", [](Parameter& para, real referenceTemperature) { para.setInitialLocalReferenceTemperature([referenceTemperature](real, real, real) { return referenceTemperature; }); })
             .def("add_interactor", &Parameter::addInteractor, py::arg("interactor"))
             .def("add_sampler", &Parameter::addSampler, py::arg("sampler"))

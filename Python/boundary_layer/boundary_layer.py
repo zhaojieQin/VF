@@ -154,7 +154,7 @@ para.set_initial_condition_perturbed_log_law(u_star, z0, length[0], length[2], b
 cuda_memory_manager = gpu.CudaMemoryManager(para)
 
 # %%
-planar_average_probe = gpu.probes.planar_average_probe.PlanarAverageProbe(
+planar_average_probe = gpu.probes.PlanarAverageProbe(
     para,
     cuda_memory_manager,
     para.get_output_path(),
@@ -172,7 +172,7 @@ planar_average_probe.add_all_available_statistics()
 planar_average_probe.set_file_name_to_n_out()
 para.add_sampler(planar_average_probe)
 # %%
-wall_model_probe = gpu.probes.wall_model_probe.WallModelProbe(
+wall_model_probe = gpu.probes.WallModelProbe(
     para,
     cuda_memory_manager,
     para.get_output_path(),
@@ -197,7 +197,7 @@ if read_precursor:
     plane_locs.extend([1000, 1500, 2000, 2500, 0])
 
 for n_probe, probe_pos in enumerate(plane_locs):
-    plane_probe = gpu.probes.probe.Probe(
+    plane_probe = gpu.probes.Probe(
         para,
         cuda_memory_manager,
         para.get_output_path(),
@@ -232,7 +232,6 @@ if write_precursor:
         int(t_start_precursor / dt),
         nTWritePrecursor,
         gpu.OutputVariable.Distributions,
-        10000,
     )
     para.add_sampler(precursor_writer)
 # %%

@@ -292,7 +292,7 @@ position_probe_zplane_z = round((position_probe_zplane_z - position_domain_0_z_m
 
 # add x-plane probes
 for index, x_position in enumerate(position_probe_xplane_x):
-    plane_probe_x = gpu.probes.probe.Probe(
+    plane_probe_x = gpu.probes.Probe(
         para,
         cuda_memory_manager,
         para.get_output_path(),
@@ -315,7 +315,7 @@ for index, x_position in enumerate(position_probe_xplane_x):
     plane_probe_x.add_all_available_statistics()
     para.add_sampler(plane_probe_x)
 # add z-plane probe
-plane_probe_z = gpu.probes.probe.Probe(
+plane_probe_z = gpu.probes.Probe(
     para,
     cuda_memory_manager,
     para.get_output_path(),
