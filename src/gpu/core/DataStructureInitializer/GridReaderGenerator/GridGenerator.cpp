@@ -263,9 +263,11 @@ void GridGenerator::sortFluidNodeTags() {
     {
         if(para->getAllNodesAllFeatures())
             builder->addAllFluidNodeIndicesToAllFeatures(level);
-        builder->sortFluidNodeIndicesAllFeatures(level); //has to be called first!
-        builder->sortFluidNodeIndicesMacroVars(level);
-        builder->sortFluidNodeIndicesApplyBodyForce(level);
+        else {
+            builder->sortFluidNodeIndicesAllFeatures(level); //has to be called first!
+            builder->sortFluidNodeIndicesMacroVars(level);
+            builder->sortFluidNodeIndicesApplyBodyForce(level);
+        }
     }
     VF_LOG_INFO("done.");
 }

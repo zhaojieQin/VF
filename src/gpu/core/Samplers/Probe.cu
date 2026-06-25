@@ -321,7 +321,7 @@ void Probe::addLevelData(int level)
     }
 
     removeInterpolationCells(indices, para.get(), level);
-
+    removeReceiveNodes(indices, para.get(), level);
     std::vector<real> coordinatesX, coordinatesY, coordinatesZ;
     coordinatesX.reserve(indices.size());
     coordinatesY.reserve(indices.size());
@@ -640,6 +640,25 @@ void removeInterpolationCells(std::vector<uint>& indices, Parameter* para, int l
     removeFineInterpolationCells(indices, para, level);
 }
 
+
+void removeReceiveNodes(std::vector<uint>& indices, Parameter* para, int level) {
+    auto& parH = para->getParHostAsReference(level);
+    for(auto neighbor : parH.recvProcessNeighborsX)
+    {
+        std::vector<uint> recvIndices(neighbor.index, neighbor.index + neighbor.numberOfNodes);
+        removeCells(indices, recvIndices);
+    }
+    for(auto neighbor : parH.recvProcessNeighborsY)
+    {
+        std::vector<uint> recvIndices(neighbor.index, neighbor.index + neighbor.numberOfNodes);
+        removeCells(indices, recvIndices);
+    }
+    for(auto neighbor : parH.recvProcessNeighborsZ)
+    {
+        std::vector<uint> recvIndices(neighbor.index, neighbor.index + neighbor.numberOfNodes);
+        removeCells(indices, recvIndices);
+    }
 }
 
+}
 //! \}
