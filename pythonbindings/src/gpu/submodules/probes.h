@@ -45,15 +45,14 @@ namespace gpu_bindings::probes
     {
         py::module probeModule = parentModule.def_submodule("probes");
 
-        py::module probeProbeModule = probeModule.def_submodule("probe");
+        auto probe = py::class_<Probe, Sampler, std::shared_ptr<Probe>>(probeModule, "Probe");
 
-        py::enum_<Probe::Statistic>(probeProbeModule, "Statistic")
+        py::enum_<Probe::Statistic>(probe, "Statistic")
         .value("Instantaneous", Probe::Statistic::Instantaneous)
         .value("Means", Probe::Statistic::Means)
         .value("Variances", Probe::Statistic::Variances);
 
-        py::class_<Probe, Sampler, std::shared_ptr<Probe>>(probeProbeModule, "Probe")
-        .def(py::init<  SPtr<Parameter>,
+        probe.def(py::init<  SPtr<Parameter>,
                         SPtr<CudaMemoryManager>,
                         const std::string&,
                         const std::string&,
@@ -82,16 +81,17 @@ namespace gpu_bindings::probes
         .def("add_probe_points_from_list", &Probe::addProbePointsFromList, py::arg("point_coords_x"), py::arg("point_coords_y"), py::arg("point_coords_z"))
         .def("set_probe_plane", &Probe::addProbePlane, py::arg("pos_x"), py::arg("pos_y"), py::arg("pos_z"), py::arg("delta_x"), py::arg("delta_y"), py::arg("delta_z"));
 
-        py::module planarAverageProbeModule = probeModule.def_submodule("planar_average_probe");
 
-        py::enum_<PlanarAverageProbe::Statistic>(planarAverageProbeModule, "Statistic")
+
+        auto planarAverageProbe = py::class_<PlanarAverageProbe, Sampler, std::shared_ptr<PlanarAverageProbe>>(probeModule, "PlanarAverageProbe");
+
+        py::enum_<PlanarAverageProbe::Statistic>(planarAverageProbe, "Statistic")
         .value("Means", PlanarAverageProbe::Statistic::Means)
         .value("Covariances", PlanarAverageProbe::Statistic::Covariances)
         .value("Skewness", PlanarAverageProbe::Statistic::Skewness)
         .value("Flatness", PlanarAverageProbe::Statistic::Flatness);
-
-        py::class_<PlanarAverageProbe, Sampler, std::shared_ptr<PlanarAverageProbe>>(planarAverageProbeModule, "PlanarAverageProbe")
-        .def(py::init<  SPtr<Parameter>,
+    
+        planarAverageProbe.def(py::init<  SPtr<Parameter>,
                         SPtr<CudaMemoryManager>,
                         const std::string&,
                         const std::string&,
@@ -121,10 +121,8 @@ namespace gpu_bindings::probes
         .def("add_all_available_statistics", &PlanarAverageProbe::addAllAvailableStatistics)
         .def("set_file_name_to_n_out", &PlanarAverageProbe::setFileNameToNOut);
 
-        py::module wallModelProbeModule = probeModule.def_submodule("wall_model_probe");
 
-
-        py::class_<WallModelProbe, Sampler, std::shared_ptr<WallModelProbe>>(wallModelProbeModule, "WallModelProbe")
+        py::class_<WallModelProbe, Sampler, std::shared_ptr<WallModelProbe>>(probeModule, "WallModelProbe")
         .def(py::init<  SPtr<Parameter>,
                         SPtr<CudaMemoryManager>,
                         const std::string&,

@@ -213,7 +213,7 @@ alm = gpu.ActuatorFarmStandalone(
 alm.enable_output("ALM", int(t_start_out_probe / dt), int(t_out_probe / dt))
 para.add_interactor(alm)
 # %%
-planar_average_probe = gpu.probes.planar_average_probe.PlanarAverageProbe(
+planar_average_probe = gpu.probes.PlanarAverageProbe(
     para,
     cuda_memory_manager,
     "horizontalPlanes",
@@ -231,7 +231,7 @@ planar_average_probe.add_all_available_statistics()
 planar_average_probe.set_file_name_to_n_out()
 para.add_sampler(planar_average_probe)
 # %%
-wall_model_probe = gpu.probes.wall_model_probe.WallModelProbe(
+wall_model_probe = gpu.probes.WallModelProbe(
     para,
     cuda_memory_manager,
     para.get_output_path(),
@@ -257,7 +257,7 @@ if read_precursor:
     plane_locs.extend([1000, 1500, 2000, 2500, 0])
 
 for n_probe, probe_pos in enumerate(plane_locs):
-    plane_probe = gpu.probes.probe.Probe(
+    plane_probe = gpu.probes.Probe(
         para,
         cuda_memory_manager,
         f"planeProbe_{n_probe + 1}",
