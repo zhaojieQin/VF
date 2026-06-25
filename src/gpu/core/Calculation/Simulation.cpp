@@ -742,12 +742,6 @@ void Simulation::readAndWriteFiles(uint timestep)
 
 Simulation::~Simulation()
 {
-    // Cuda Streams
-    if (para->getUseStreams()) {
-        para->getStreamManager()->destroyCudaEvents();
-        para->getStreamManager()->terminateStreams();
-    }
-
     // CudaFreeHostMemory
     for (int lev = para->getCoarse(); lev <= para->getFine(); lev++) {
         cudaMemoryManager->cudaFreeCoord(lev);
@@ -848,6 +842,12 @@ Simulation::~Simulation()
     // Turbulence Intensity
     if (para->getCalcTurbulenceIntensity()) {
         cudaFreeTurbulenceIntensityArrays(para.get(), cudaMemoryManager.get());
+    }
+
+        // Cuda Streams
+    if (para->getUseStreams()) {
+        para->getStreamManager()->destroyCudaEvents();
+        para->getStreamManager()->terminateStreams();
     }
 }
 
