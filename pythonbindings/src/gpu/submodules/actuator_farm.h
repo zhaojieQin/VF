@@ -106,9 +106,9 @@ namespace gpu_bindings::actuator_farm
                 py::arg("maximum_amplitude_x"),
                 py::arg("maximum_amplitude_y"),
                 py::arg("maximum_amplitude_z"))
-            .def_readwrite("maximum_amplitude_x", &FloatingConfig::maximumAmplitudex)
-            .def_readwrite("maximum_amplitude_y", &FloatingConfig::maximumAmplitudey)
-            .def_readwrite("maximum_amplitude_z", &FloatingConfig::maximumAmplitudez);
+            .def_readwrite("maximum_amplitude_x", &FloatingConfig::maximumAmplitudeX)
+            .def_readwrite("maximum_amplitude_y", &FloatingConfig::maximumAmplitudeY)
+            .def_readwrite("maximum_amplitude_z", &FloatingConfig::maximumAmplitudeZ);
 
         actuatorFarm.def(py::init<  SPtr<Parameter>,
                         SPtr<CudaMemoryManager>,
