@@ -67,9 +67,9 @@ public:
         bool flagLocalSmearingWidth;
     };
     struct FloatingConfig {
-        real maximumAmplitudex;
-        real maximumAmplitudey;
-        real maximumAmplitudez;
+        real maximumAmplitudeX;
+        real maximumAmplitudeY;
+        real maximumAmplitudeZ;
     };
 
     ActuatorFarm(
