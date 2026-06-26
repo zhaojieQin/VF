@@ -358,9 +358,9 @@ protected:
     const std::vector<real> towerHeights;
     real maxTowerHeight{0.0};
     int streamIndex;
-    const real floatingMaximumAmplitudex;
-    const real floatingMaximumAmplitudey;
-    const real floatingMaximumAmplitudez;
+    const real floatingMaximumAmplitudeX;
+    const real floatingMaximumAmplitudeY;
+    const real floatingMaximumAmplitudeZ;
     const real maxFloatingAmplitude;
 
     bool writeOutput{false};
