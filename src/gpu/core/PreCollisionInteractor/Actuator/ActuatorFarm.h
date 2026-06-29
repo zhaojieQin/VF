@@ -115,7 +115,7 @@ public:
         vawtRotorHeight(vawtConfig ? vawtConfig->rotorHeight : 0.0),
         flagLocalSmearingWidth(vawtConfig ? vawtConfig->flagLocalSmearingWidth : false),
         floatingMaximumAmplitudeX(floatingConfig ? floatingConfig->maximumAmplitudeX : 0.0),
-        floatingMaximumAmplitudeZ(floatingConfig ? floatingConfig->maximumAmplitudeY : 0.0),
+        floatingMaximumAmplitudeY(floatingConfig ? floatingConfig->maximumAmplitudeY : 0.0),
         floatingMaximumAmplitudeZ(floatingConfig ? floatingConfig->maximumAmplitudeZ : 0.0),
         maxFloatingAmplitude(std::hypot(floatingConfig ? floatingConfig->maximumAmplitudeX : 0.0,
                                         floatingConfig ? floatingConfig->maximumAmplitudeY : 0.0,
