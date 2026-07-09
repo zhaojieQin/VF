@@ -55,17 +55,6 @@ class FileCollection:
     def __init__(self, *args, **kwargs) -> None: ...
 
 
-class FloatingConfig:
-    maximum_amplitude_x: float
-    maximum_amplitude_y: float
-    maximum_amplitude_z: float
-    def __init__(
-        self,
-        maximum_amplitude_x: float,
-        maximum_amplitude_y: float,
-        maximum_amplitude_z: float,
-    ) -> None: ...
-
 class ActuatorFarm(PreCollisionInteractor):
     class HubConfig:
         length: float
@@ -97,6 +86,18 @@ class ActuatorFarm(PreCollisionInteractor):
         rotor_height: float
         flag_localized_smearing_width: bool
         def __init__(self, rotor_height: float, flag_localized_smearing_width: bool) -> None: ...
+
+    class FloatingConfig:
+        maximum_amplitude_x: float
+        maximum_amplitude_y: float
+        maximum_amplitude_z: float
+        def __init__(
+            self,
+            maximum_amplitude_x: float,
+            maximum_amplitude_y: float,
+            maximum_amplitude_z: float,
+        ) -> None: ...
+
     def __init__(
         self,
         para: Parameter,
