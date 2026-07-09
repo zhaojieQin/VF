@@ -120,7 +120,7 @@ public:
     void setSurfaceLayerBoundaryCondition(SideType sideType, real normalX, real normalY, real normalZ, uint samplingOffset, real vonKarmanConstant,
                                           real roughnessLength, real roughnessLengthTemperature, real surfaceHeatFlux, real surfaceTemperature, real heatingRate,
                                           real deltaX, real deltaT, std::shared_ptr<GbSpatialData3D<real>> roughnessMap=nullptr) const;
-    void setVelocityBoundaryCondition(SideType sideType, real vx, real vy, real vz) const;
+    void setVelocityBoundaryCondition(SideType sideType, real vx, real vy, real vz, std::optional<std::function<void(real x, real y, real z, real& vx, real& vy, real& vz)>> velocityProfile = std::nullopt) const;
     void setPressureBoundaryCondition(SideType sideType, real rho) const;
     void setNoSlipBoundaryCondition(SideType sideType) const;
     void setPeriodicBoundaryCondition(bool periodic_X, bool periodic_Y, bool periodic_Z);

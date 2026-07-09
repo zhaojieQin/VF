@@ -33,7 +33,9 @@
 //=======================================================================================
 #include "LevelGridBuilder.h"
 
+#include <functional>
 #include <numeric>
+#include <optional>
 #include <stdio.h>
 #include <iostream>
 #include <algorithm>
@@ -188,7 +190,7 @@ void LevelGridBuilder::setSurfaceLayerBoundaryCondition(SideType sideType, real 
     }
 }
 
-void LevelGridBuilder::setVelocityBoundaryCondition(SideType sideType, real vx, real vy, real vz)
+void LevelGridBuilder::setVelocityBoundaryCondition(SideType sideType, real vx, real vy, real vz, std::optional<std::function<void(real x,real y,real z, real& vx, real& vy, real& vz)>> velocityProfile)
 {
     if (sideType == SideType::GEOMETRY)
         setVelocityGeometryBoundaryCondition(vx, vy, vz);
@@ -204,6 +206,8 @@ void LevelGridBuilder::setVelocityBoundaryCondition(SideType sideType, real vx, 
             velocityBoundaryCondition->side->addIndices(grids, level, velocityBoundaryCondition);
 
             velocityBoundaryCondition->fillVelocityLists();
+            if(velocityProfile)
+                velocityBoundaryCondition->setVelocityProfile(grids[level], velocityProfile.value());
 
             boundaryConditions[level]->velocityBoundaryConditions.push_back(velocityBoundaryCondition);
 

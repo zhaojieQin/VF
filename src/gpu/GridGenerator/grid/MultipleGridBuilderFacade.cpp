@@ -389,9 +389,9 @@ void MultipleGridBuilderFacade::setPrecursorBoundaryCondition(SideType sideType,
     });
 }
 
-void MultipleGridBuilderFacade::setVelocityBoundaryCondition(SideType sideType, real vx, real vy, real vz) const
+void MultipleGridBuilderFacade::setVelocityBoundaryCondition(SideType sideType, real vx, real vy, real vz, std::optional<std::function<void(real x,real y,real z, real& vx, real& vy, real& vz)>> velocityProfile) const
 {
-    setBoundaryCondition(sideType, [&]() { gridBuilder->setVelocityBoundaryCondition(sideType, vx, vy, vz); });
+    setBoundaryCondition(sideType, [&]() { gridBuilder->setVelocityBoundaryCondition(sideType, vx, vy, vz, velocityProfile); });
 }
 
 void MultipleGridBuilderFacade::setPressureBoundaryCondition(SideType sideType, real rho) const

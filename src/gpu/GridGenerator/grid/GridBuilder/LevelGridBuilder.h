@@ -34,6 +34,7 @@
 #ifndef LEVEL_GRID_BUILDER_H
 #define LEVEL_GRID_BUILDER_H
 
+#include <optional>
 #include <vector>
 #include <string>
 #include <memory>
@@ -95,7 +96,7 @@ public:
     void setSurfaceLayerBoundaryCondition(SideType sideType, real normalX, real normalY, real normalZ, uint samplingOffset, real vonKarmanConstant,
                                           real roughnessLength, real roughnessLengthTemperature, real surfaceHeatFlux, real surfaceTemperature, real heatingRate,
                                           real deltaX, real deltaT, std::shared_ptr<GbSpatialData3D<real>> roughnessMap=nullptr);
-    virtual void setVelocityBoundaryCondition(SideType sideType, real vx, real vy, real vz);
+    virtual void setVelocityBoundaryCondition(SideType sideType, real vx, real vy, real vz, std::optional<std::function<void(real x, real y, real z, real& vx, real& vy, real& vz)>> velocityProfile = std::nullopt);
     virtual void setPressureBoundaryCondition(SideType sideType, real rho);
     virtual void setPeriodicBoundaryCondition(bool periodic_X, bool periodic_Y, bool periodic_Z);
     void setPeriodicShiftOnXBoundaryInYDirection(real shift);
