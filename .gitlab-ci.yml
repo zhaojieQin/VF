@@ -164,14 +164,14 @@ gcc_12_python:
   stage: build
 
   cache:
-    key: "gcc_12-$CI_COMMIT_REF_SLUG"
+    key: "gcc_12_python-$CI_COMMIT_REF_SLUG"
     paths:
-      - pybuild/
+      - $VIRTUAL_ENV/
 
   artifacts:
     expire_in: 1 hrs
     paths:
-      - pybuild/ # build in separate folder to avoid conflicts with c++ build
+      - $CI_PROJECT_DIR/build
 
   before_script:
     - export CC=gcc
@@ -183,7 +183,7 @@ gcc_12_python:
     - . $VIRTUAL_ENV/bin/activate
 
   script:
-    - pip install . -v -C cmake.define.VF_ENABLE_GPU=ON -C cmake.define.VF_ENABLE_CPU=ON
+    - pip install . -v -C cmake.define.VF_ENABLE_GPU=ON -C cmake.define.VF_ENABLE_CPU=ON -C skbuild.build.tool-args="-j24" -Cbuild-dir=build
 
 ###############################################################################
 ##                                Tests                                      ##
@@ -228,6 +228,30 @@ gcc_12_python_bindings_test:
 
   script:
     - python3 -m unittest discover -s Python -v
+
+###############################################################################
+gcc_12_python_bindings_stubs_test:
+  stage: test
+
+  needs: ["gcc_12_python"]
+  
+  cache:
+    key: "gcc_12_python-$CI_COMMIT_REF_SLUG"
+    paths:
+      - $VIRTUAL_ENV/
+  before_script:
+    - export CC=gcc
+    - export CXX=g++
+    - $CXX --version
+    - $CC --version
+    - export CCACHE_BASEDIR=$CI_PROJECT_DIR
+    - export CCACHE_DIR=$CI_PROJECT_DIR/cache
+    - . $VIRTUAL_ENV/bin/activate
+    - pip install mypy
+
+  script:
+    - pip install . -v -C cmake.define.VF_ENABLE_GPU=ON -C cmake.define.VF_ENABLE_CPU=ON -C skbuild.build.tool-args="-j24" -Cbuild-dir=build
+    - python utilities/ci-tests/stub_tests.py
 
 ###############################################################################
 build-regression-tests-ci:

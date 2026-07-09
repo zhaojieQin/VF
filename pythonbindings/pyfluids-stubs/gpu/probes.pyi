@@ -67,6 +67,7 @@ class Probe(gpu.Sampler):
     def set_probe_plane(
         self, pos_x: float, pos_y: float, pos_z: float, delta_x: float, delta_y: float, delta_z: float
     ) -> None: ...
+    def set_file_name_to_n_out(self) -> None: ...
 
 class PlanarAverageProbe(gpu.Sampler):
     class Statistic(Enum):

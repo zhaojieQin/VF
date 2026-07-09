@@ -1,0 +1,7 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: Copyright © VirtualFluids Project contributors, see AUTHORS.md in root folder
+.*__index__
+.*__int__
+.*__members__
+.*.__pybind11_native_enum__
+pyfluids.timeseries_probe_reader

@@ -47,7 +47,7 @@ inline void makeModule(py::module_ &parentModule)
         .value("Distributions", PrecursorWriter::OutputVariable::Distributions);
 
     py::enum_<PrecursorWriter::OutputVariableTemperature>(parentModule, "OutputVariableTemperature")
-        .value("Velocities", PrecursorWriter::OutputVariableTemperature::Temperature)
+        .value("Temperature", PrecursorWriter::OutputVariableTemperature::Temperature)
         .value("Distributions", PrecursorWriter::OutputVariableTemperature::Distributions);
 
     py::class_<PrecursorWriter, Sampler, std::shared_ptr<PrecursorWriter>>(parentModule, "PrecursorWriter")

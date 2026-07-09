@@ -43,14 +43,14 @@ namespace lbm_bindings
     {
         auto lbm = pyfluids.def_submodule("lbm");
         py::enum_<vf::lbm::TurbulenceModel>(lbm, "TurbulenceModel")
-        .value("None", vf::lbm::TurbulenceModel::None)
+        .value("NONE", vf::lbm::TurbulenceModel::None)
         .value("Smagorinsky", vf::lbm::TurbulenceModel::Smagorinsky)
         .value("QR", vf::lbm::TurbulenceModel::QR)
         .value("AMD", vf::lbm::TurbulenceModel::AMD)
         .value("AMDStratified", vf::lbm::TurbulenceModel::AMDStratified);
 
         py::enum_<vf::lbm::advection_diffusion::TurbulenceModel>(lbm, "TurbulenceModelAdvectionDiffusion")
-        .value("None", vf::lbm::advection_diffusion::TurbulenceModel::None)
+        .value("NONE", vf::lbm::advection_diffusion::TurbulenceModel::None)
         .value("Default", vf::lbm::advection_diffusion::TurbulenceModel::Default)
         .value("Moeng", vf::lbm::advection_diffusion::TurbulenceModel::Moeng)
         .value("AMDStratified", vf::lbm::advection_diffusion::TurbulenceModel::AMDStratified);
