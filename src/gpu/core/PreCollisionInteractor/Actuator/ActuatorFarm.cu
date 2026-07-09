@@ -74,6 +74,7 @@ struct TurbineData
     const real *posX, *posY, *posZ;
     const uint numberOfTurbines;
     const real smearingWidth;
+    const real floatingAmplitude;
 };
 
 struct ComponentData
@@ -205,7 +206,7 @@ __global__ void applyBodyForces(GridData gridData, const TurbineData turbineData
 
             if (inCylinderVolume<x, false>(gridCoordX, gridCoordY, gridCoordZ, centerX + c1o2 * componentData.hubLength,
                                            centerY, centerZ, componentData.hubLength, componentData.hubRadius,
-                                           c3o2 * turbineData.smearingWidth))
+                                           (c3o2 * turbineData.smearingWidth) + turbineData.floatingAmplitude))
                 accumulateSmearingForces<UseLocalSmearingWidth>(
                     componentData, gridCoordX, gridCoordY, gridCoordZ,
                     bladePointsTotal + turbine * componentData.numberOfHubPointsPerTurbine,
@@ -221,7 +222,7 @@ __global__ void applyBodyForces(GridData gridData, const TurbineData turbineData
 
             if (inCylinderVolume<z, false>(gridCoordX, gridCoordY, gridCoordZ, towerCenterX, towerCenterY,
                                            towerTopZ - c1o2 * componentData.maxTowerHeight, componentData.maxTowerHeight,
-                                           componentData.towerRadius, c3o2 * turbineData.smearingWidth))
+                                           componentData.towerRadius, (c3o2 * turbineData.smearingWidth) + turbineData.floatingAmplitude))
                 accumulateSmearingForces<UseLocalSmearingWidth>(
                     componentData, gridCoordX, gridCoordY, gridCoordZ,
                     bladePointsTotal + hubPointsTotal + turbine * componentData.numberOfTowerPointsPerTurbine,
@@ -317,10 +318,10 @@ void ActuatorFarm::interact(int level, uint t)
                               para->getScaledForceRatio(level) };
 
     const TurbineData turbineData { this->turbinePosXD, this->turbinePosYD, this->turbinePosZD, this->numberOfTurbines,
-                                    this->smearingWidth };
+                                    this->smearingWidth, maxFloatingAmplitude };
 
     const ComponentData componentData {
-        this->diameter,
+        this->diameter + (c2o1 * maxFloatingAmplitude),
         this->getVAWTRotorBoundingMargin(),
         this->numberOfBladePointsPerTurbine,
         this->getTotalNumberOfPoints(),
@@ -494,8 +495,8 @@ void ActuatorFarm::initBoundingVolumes()
     const real rotorBoundingSmearingWidth = this->getRotorBoundingSmearingWidth();
     const real rotorBoundingMargin = this->getVAWTRotorBoundingMargin();
     const real rotorBoundingVolumeRadius =
-        useVAWTVolume ? c1o2 * this->diameter + rotorBoundingMargin
-                      : getRotorBoundingVolumeRadius(this->diameter, rotorBoundingSmearingWidth, false);
+        (useVAWTVolume ? (c1o2 * this->diameter) + rotorBoundingMargin
+                       : getRotorBoundingVolumeRadius(this->diameter, rotorBoundingSmearingWidth, false) + maxFloatingAmplitude);
     const real rotorBoundingVolumeHeight = this->vawtRotorHeight + c2o1 * rotorBoundingMargin;
     const real deltaX = para->getScaledLengthRatio(level);
     const real effectiveRotorRadius = std::max(c0o1, rotorBoundingVolumeRadius - deltaX);
@@ -526,12 +527,14 @@ void ActuatorFarm::initBoundingVolumes()
             bool inRotorVolume = false;
             if (useVAWTVolume) {
                 inRotorVolume = inCylinderVolume<z, true>(nodeX, nodeY, nodeZ, turbinePosX, turbinePosY, turbinePosZ,
-                                                          this->vawtRotorHeight, c1o2 * this->diameter, rotorBoundingMargin);
+                                                          this->vawtRotorHeight, c1o2 * this->diameter,
+                                                          rotorBoundingMargin);
             } else {
                 const real distX = nodeX - turbinePosX;
                 const real distY = nodeY - turbinePosY;
                 const real distZ = nodeZ - turbinePosZ;
-                inRotorVolume = inSphereVolume(distX, distY, distZ, this->diameter, rotorBoundingSmearingWidth);
+                inRotorVolume = inSphereVolume(distX, distY, distZ, this->diameter,
+                                               rotorBoundingSmearingWidth + maxFloatingAmplitude);
             }
 
             if (inRotorVolume) {
@@ -560,8 +563,8 @@ void ActuatorFarm::initBoundingVolumes()
                 const real nodeY = para->getParH(level)->coordinateY[pos];
                 const real nodeZ = para->getParH(level)->coordinateZ[pos];
 
-                if (inCylinderVolume<x, false>(nodeX, nodeY, nodeZ, centerX + c1o2 * hubLength, centerY, centerZ, hubLength,
-                                               hubRadius, c3o2 * this->smearingWidth)) {
+                if (inCylinderVolume<x, false>(nodeX, nodeY, nodeZ, centerX + (c1o2 * hubLength), centerY, centerZ, hubLength,
+                                               hubRadius, c3o2 * this->smearingWidth + maxFloatingAmplitude)) {
                     nodesInBoundingVolumes.push_back((uint)pos);
                 }
             }
@@ -588,7 +591,7 @@ void ActuatorFarm::initBoundingVolumes()
 
                 if (inCylinderVolume<z, false>(nodeX, nodeY, nodeZ, towerCenterX, towerCenterY,
                                                towerTopZ - c1o2 * towerHeights[turbine], towerHeights[turbine], towerRadius,
-                                               c3o2 * smearingWidth)) {
+                                               c3o2 * smearingWidth + maxFloatingAmplitude)) {
                     nodesInBoundingVolumes.push_back((uint)pos);
                 }
             }

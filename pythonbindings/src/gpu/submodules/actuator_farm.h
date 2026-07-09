@@ -66,6 +66,7 @@ namespace gpu_bindings::actuator_farm
         using HubConfig = ActuatorFarm::HubConfig;
         using TowerConfig = ActuatorFarm::TowerConfig;
         using VAWTConfig = ActuatorFarm::VAWTConfig;
+        using FloatingConfig = ActuatorFarm::FloatingConfig;
 
         auto actuatorFarm = py::class_<ActuatorFarm, PreCollisionInteractor, PyActuatorFarm, std::shared_ptr<ActuatorFarm>>(parentModule, "ActuatorFarm", py::dynamic_attr());
 
@@ -100,6 +101,15 @@ namespace gpu_bindings::actuator_farm
             .def_readwrite("rotor_height", &VAWTConfig::rotorHeight)
             .def_readwrite("flag_local_smearing_width", &VAWTConfig::flagLocalSmearingWidth);
 
+        py::class_<FloatingConfig>(actuatorFarm, "FloatingConfig")
+            .def(py::init<real, real, real>(),
+                py::arg("maximum_amplitude_x"),
+                py::arg("maximum_amplitude_y"),
+                py::arg("maximum_amplitude_z"))
+            .def_readwrite("maximum_amplitude_x", &FloatingConfig::maximumAmplitudeX)
+            .def_readwrite("maximum_amplitude_y", &FloatingConfig::maximumAmplitudeY)
+            .def_readwrite("maximum_amplitude_z", &FloatingConfig::maximumAmplitudeZ);
+
         actuatorFarm.def(py::init<  SPtr<Parameter>,
                         SPtr<CudaMemoryManager>,
                         const real,
@@ -113,7 +123,8 @@ namespace gpu_bindings::actuator_farm
                         const uint,
                         const std::optional<ActuatorFarm::HubConfig>&,
                         const std::optional<ActuatorFarm::TowerConfig>&,
-                        const std::optional<ActuatorFarm::VAWTConfig>&>(),
+                        const std::optional<ActuatorFarm::VAWTConfig>&,
+                        const std::optional<ActuatorFarm::FloatingConfig>&>(),
                         py::arg("para"),
                         py::arg("cuda_memory_manager"),
                         py::arg("diameter"),
@@ -127,7 +138,8 @@ namespace gpu_bindings::actuator_farm
                         py::arg("number_of_blades") = 3,
                         py::arg("hub_config") = py::none(),
                         py::arg("tower_config") = py::none(),
-                        py::arg("vawt_config") = py::none())
+                        py::arg("vawt_config") = py::none(),
+                        py::arg("floating_config") = py::none())
         .def_property_readonly("number_of_points_per_blade", &ActuatorFarm::getNumberOfPointsPerBlade)
         .def_property_readonly("number_of_blades_per_turbine", &ActuatorFarm::getNumberOfBladesPerTurbine)
         .def_property_readonly("number_of_turbines", &ActuatorFarm::getNumberOfTurbines)
@@ -230,6 +242,7 @@ namespace gpu_bindings::actuator_farm
                         const int,
                         const std::optional<ActuatorFarm::HubConfig>&,
                         const std::optional<ActuatorFarm::TowerConfig>&,
+                        const std::optional<ActuatorFarm::FloatingConfig>&,
                         const std::optional<real>,
                         const std::optional<real>,
                         const std::optional<real>,
@@ -247,6 +260,7 @@ namespace gpu_bindings::actuator_farm
                         py::arg("level"),
                         py::arg("hub_config") = py::none(),
                         py::arg("tower_config") = py::none(),
+                        py::arg("floating_config") = py::none(),
                         py::arg("hub_drag_coeff") = py::none(),
                         py::arg("hub_skin_friction_coeff") = py::none(),
                         py::arg("tower_drag_coeff") = py::none(),

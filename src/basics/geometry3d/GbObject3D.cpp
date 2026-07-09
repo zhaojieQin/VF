@@ -91,7 +91,7 @@ bool GbObject3D::isInsideCell(const double &minX1, const double &minX2, const do
 {
     if (ub_math::greaterEqual(this->getX1Minimum(), minX1) && ub_math::greaterEqual(this->getX2Minimum(), minX2) &&
         ub_math::greaterEqual(this->getX3Minimum(), minX3) && ub_math::lessEqual(this->getX1Maximum(), maxX1) &&
-        ub_math::lessEqual(this->getX2Maximum(), maxX2) && ub_math::lessEqual(this->getX2Maximum(), maxX3))
+        ub_math::lessEqual(this->getX2Maximum(), maxX2) && ub_math::lessEqual(this->getX3Maximum(), maxX3))
         return true;
 
     return false;

@@ -86,6 +86,18 @@ class ActuatorFarm(PreCollisionInteractor):
         rotor_height: float
         flag_localized_smearing_width: bool
         def __init__(self, rotor_height: float, flag_localized_smearing_width: bool) -> None: ...
+
+    class FloatingConfig:
+        maximum_amplitude_x: float
+        maximum_amplitude_y: float
+        maximum_amplitude_z: float
+        def __init__(
+            self,
+            maximum_amplitude_x: float,
+            maximum_amplitude_y: float,
+            maximum_amplitude_z: float,
+        ) -> None: ...
+
     def __init__(
         self,
         para: Parameter,
@@ -102,6 +114,7 @@ class ActuatorFarm(PreCollisionInteractor):
         hub_config: Optional[HubConfig] = ...,
         tower_config: Optional[TowerConfig] = ...,
         vawt_config: Optional[VAWTConfig] = ...,
+        floating_config: Optional[FloatingConfig] = ...,
     ) -> None: ...
     @property
     def number_of_points_per_blade(self) -> int: ...
@@ -202,6 +215,7 @@ class ActuatorFarmStandalone(ActuatorFarm):
         level: int,
         hub_config: Optional[ActuatorFarm.HubConfig] = ...,
         tower_config: Optional[ActuatorFarm.TowerConfig] = ...,
+        floating_config: Optional[ActuatorFarm.FloatingConfig] = ...,
         hub_drag_coeff: Optional[float] = ...,
         hub_skin_friction_coeff: Optional[float] = ...,
         tower_drag_coeff: Optional[float] = ...,

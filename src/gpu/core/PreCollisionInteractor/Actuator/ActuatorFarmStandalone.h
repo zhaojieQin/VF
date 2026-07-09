@@ -46,6 +46,7 @@ public:
                            const std::vector<real>& rotorSpeeds, const real smearingWidth, const int level,
                            const std::optional<HubConfig>& hubConfig = std::nullopt,
                            const std::optional<TowerConfig>& towerConfig = std::nullopt,
+                           const std::optional<FloatingConfig>& floatingConfig = std::nullopt,
                            const std::optional<real> hubDragCoeff = std::nullopt,
                            const std::optional<real> hubSkinFrictionCoeff = std::nullopt,
                            const std::optional<real> towerDragCoeff = std::nullopt,
@@ -58,7 +59,7 @@ public:
           bladeNormalCoefficients(bladeNormalCoefficients),
           ActuatorFarm(std::move(para), std::move(cudaMemoryManager), diameter,
                        computeBladeRadii(diameter, numberOfPointsPerBlade), turbinePositionsX, turbinePositionsY,
-                       turbinePositionsZ, smearingWidth, level, true, numberOfBlades, hubConfig, towerConfig)
+                       turbinePositionsZ, smearingWidth, level, true, numberOfBlades, hubConfig, towerConfig, std::nullopt, floatingConfig)
     {
         if (numberOfTurbines != rotorSpeeds.size())
             throw std::runtime_error("ActuatorFarmStandalone::ActuatorFarmStandalone: rotor speeds need to have same length "
