@@ -61,15 +61,15 @@ void makeSpatialDataSubmodules(py::module_& parentModule)
 {
     using namespace numpy_utils;
 
-    auto PyGbSpatialData3D =
-        py::class_<GbSpatialData3D<T>, py::smart_holder>(parentModule, getNameWithSuffix<T>("GbSpatialData3D").c_str());
+    (void) py::class_<GbSpatialData3D<T>, py::smart_holder>(parentModule, getNameWithSuffix<T>("GbSpatialData3D").c_str());
 
-    py::native_enum<typename GbStructuredMesh3D<T>::InterpolationStrategy>(PyGbSpatialData3D, "InterpolationStrategy",
+    auto pyGbStructuredMesh3D = py::class_<GbStructuredMesh3D<T>, GbSpatialData3D<T>, py::smart_holder>(
+            parentModule, getNameWithSuffix<T>("GbStructuredMesh3D").c_str());
+    py::native_enum<typename GbStructuredMesh3D<T>::InterpolationStrategy>(pyGbStructuredMesh3D, "InterpolationStrategy",
                                                                            "enum.Enum")
-        .value("Trilinear", GbStructuredMesh3D<T>::InterpolationStrategy::Trilinear);
+        .value("Trilinear", GbStructuredMesh3D<T>::InterpolationStrategy::Trilinear).finalize();
 
-    py::class_<GbStructuredMesh3D<T>, GbSpatialData3D<T>, py::smart_holder>(
-        parentModule, getNameWithSuffix<T>("GbStructuredMesh3D").c_str())
+    pyGbStructuredMesh3D
         .def(py::init([](py::array_t<real>& spacing, py::array_t<real>& origin, py::array_t<uint>& nPoints,
                          py::array_t<T>& values,
                          typename GbStructuredMesh3D<T>::InterpolationStrategy interpolationStrategy) {

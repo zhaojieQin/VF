@@ -46,6 +46,10 @@ classifiers = [
   "Programming Language :: Python :: 3.14",
 ]
 
+dependencies = [
+    "numpy"
+]
+
 [project.urls]
 url = "https://git.rz.tu-bs.de/irmb/virtualfluids"
 

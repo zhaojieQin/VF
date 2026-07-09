@@ -34,6 +34,7 @@ r"""
 from __future__ import annotations
 
 class Logger:
+    def __init__(self, *args) -> None: ...
     @staticmethod
     def change_log_path(path: str) -> None: ...
     @staticmethod
