@@ -32,6 +32,7 @@
 //=======================================================================================
 #include <gmock/gmock.h>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 
 #include <gpu/GridGenerator/grid/MultipleGridBuilderFacade.h>
@@ -102,7 +103,7 @@ public:
     MOCK_METHOD(void, setStressBoundaryCondition,
                 (SideType sideType, real normalX, real normalY, real normalZ, uint samplingOffset, real vonKarmanConstant, real roughnessLength, real deltaX, std::shared_ptr<GbSpatialData3D<real>> roughnessMap),
                 (override));
-    MOCK_METHOD(void, setVelocityBoundaryCondition, (SideType sideType, real vx, real vy, real vz), (override));
+    MOCK_METHOD(void, setVelocityBoundaryCondition, (SideType sideType, real vx, real vy, real vz, std::optional<std::function<void(real, real, real, real&, real&, real&)>>), (override));
     MOCK_METHOD(void, setPressureBoundaryCondition, (SideType sideType, real rho), (override));
     MOCK_METHOD(void, setSlipBoundaryCondition, (SideType sideType, real normalX, real normalY, real normalZ),
                 (override));
@@ -506,35 +507,36 @@ TEST_F(MultipleGridBuilderFacadeTest_24subdomains, velocityPY)
     real vx = 0.1;
     real vy = 0.2;
     real vz = 0.3;
+    std::optional<std::function<void(real,real,real,real&,real&,real&)>> velFunction;
 
     // process index 0
     EXPECT_CALL(*mockGridBuilder, setVelocityBoundaryCondition).Times(0);
     sut->createGrids(0);
-    sut->setVelocityBoundaryCondition(sideType, vx, vy, vz);
+    sut->setVelocityBoundaryCondition(sideType, vx, vy, vz, velFunction);
 
     // process index 9
     this->createNewSut();
-    EXPECT_CALL(*mockGridBuilder, setVelocityBoundaryCondition).Times(0);
+    EXPECT_CALL(*mockGridBuilder, setVelocityBoundaryCondition(sideType,vx,vy,vz,testing::_)).Times(0);
     sut->createGrids(9);
-    sut->setVelocityBoundaryCondition(sideType, vx, vy, vz);
+    sut->setVelocityBoundaryCondition(sideType, vx, vy, vz, velFunction);
 
     // process index 16
     this->createNewSut();
-    EXPECT_CALL(*mockGridBuilder, setVelocityBoundaryCondition(sideType, vx, vy, vz));
+    EXPECT_CALL(*mockGridBuilder, setVelocityBoundaryCondition(sideType, vx, vy, vz, testing::_));
     sut->createGrids(16);
-    sut->setVelocityBoundaryCondition(sideType, vx, vy, vz);
+    sut->setVelocityBoundaryCondition(sideType, vx, vy, vz, velFunction);
 
     // process index 23
     this->createNewSut();
-    EXPECT_CALL(*mockGridBuilder, setVelocityBoundaryCondition(sideType, vx, vy, vz));
+    EXPECT_CALL(*mockGridBuilder, setVelocityBoundaryCondition(sideType, vx, vy, vz, testing::_));
     sut->createGrids(23);
-    sut->setVelocityBoundaryCondition(sideType, vx, vy, vz);
+    sut->setVelocityBoundaryCondition(sideType, vx, vy, vz, velFunction);
 
-    EXPECT_CALL(*mockGridBuilder, setVelocityBoundaryCondition(sideType, vx, vy, vz)).Times(8);
+    EXPECT_CALL(*mockGridBuilder, setVelocityBoundaryCondition(sideType, vx, vy, vz, testing::_)).Times(8);
     for (int i = 0; i < 24; i++) {
         this->createNewSut();
         sut->createGrids(i);
-        sut->setVelocityBoundaryCondition(sideType, vx, vy, vz);
+        sut->setVelocityBoundaryCondition(sideType, vx, vy, vz, velFunction);
     }
 }
 

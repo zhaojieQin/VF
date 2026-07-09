@@ -32,6 +32,7 @@
 #include <optional>
 
 #include <pybind11/pybind11.h>
+#include "PointerDefinitions.h"
 #include "gpu/GridGenerator/utilities/communication.h"
 #include "gpu/GridGenerator/geometries/Object.h"
 #include "gpu/GridGenerator/geometries/BoundingBox/BoundingBox.h"
@@ -44,6 +45,8 @@
 #include "gpu/GridGenerator/grid/GridBuilder/MultipleGridBuilder.h"
 #include "gpu/GridGenerator/grid/GridDimensions.h"
 #include "basics/constants/NumericConstants.h"
+#include "grid/BoundaryConditions/BoundaryCondition.h"
+#include "grid/BoundaryConditions/Side.h"
 #include "grid/MultipleGridBuilderFacade.h"
 
 
@@ -93,7 +96,14 @@ namespace gpu_bindings::grid_generator
 
         py::class_<LevelGridBuilder, GridBuilder, std::shared_ptr<LevelGridBuilder>>(gridGeneratorModule, "LevelGridBuilder")
         .def("set_slip_boundary_condition", &LevelGridBuilder::setSlipBoundaryCondition, py::arg("side_type"), py::arg("normal_x"), py::arg("normal_y"), py::arg("normal_z"))
-        .def("set_velocity_boundary_condition", &LevelGridBuilder::setVelocityBoundaryCondition, py::arg("side_type"), py::arg("vx"), py::arg("vy"), py::arg("vz"))
+        .def("set_velocity_boundary_condition", [](LevelGridBuilder& lgb, SideType side, real vx, real vy, real vz, std::optional<std::function<std::tuple<real, real, real>(real, real, real)>> velocityProfile){
+            lgb.setVelocityBoundaryCondition(side, vx, vy, vz, [&](real x, real y, real z, real& vx, real& vy, real& vz){
+                auto vel = velocityProfile.value()(x,y,z);
+                vx = std::get<0>(vel);            
+                vy = std::get<1>(vel);            
+                vz = std::get<2>(vel);            
+            });
+        }, py::arg("side_type"), py::arg("vx"), py::arg("vy"), py::arg("vz"), py::arg("velocity_profile"))
         .def("set_pressure_boundary_condition", &LevelGridBuilder::setPressureBoundaryCondition, py::arg("side_type"), py::arg("rho"))
         .def("set_periodic_boundary_condition", &LevelGridBuilder::setPeriodicBoundaryCondition, py::arg("periodic_x"), py::arg("periodic_y"), py::arg("periodic_z"))
         .def("set_no_slip_boundary_condition", &LevelGridBuilder::setNoSlipBoundaryCondition, py::arg("side_type"))
@@ -142,7 +152,14 @@ namespace gpu_bindings::grid_generator
         .def("set_periodic_boundary_condition", py::overload_cast<bool, bool, bool>(&MultipleGridBuilderFacade::setPeriodicBoundaryCondition), py::arg("periodic_x"), py::arg("periodic_y"), py::arg("periodic_z"))
         .def("set_periodic_boundary_condition", py::overload_cast<const std::array<bool, 3>&>(&MultipleGridBuilderFacade::setPeriodicBoundaryCondition), py::arg("periodicity"))
         .def("set_slip_boundary_condition", &MultipleGridBuilderFacade::setSlipBoundaryCondition, py::arg("side_type"), py::arg("normal_x"), py::arg("normal_y"), py::arg("normal_z"))
-        .def("set_velocity_boundary_condition", &MultipleGridBuilderFacade::setVelocityBoundaryCondition, py::arg("side_type"), py::arg("vx"), py::arg("vy"), py::arg("vz"))
+        .def("set_velocity_boundary_condition", [](MultipleGridBuilderFacade& mgbf, SideType side, real vx, real vy, real vz, std::optional<std::function<std::tuple<real, real, real>(real, real, real)>> velocityProfile){
+            mgbf.setVelocityBoundaryCondition(side, vx, vy, vz, [&](real x, real y, real z, real& vx, real& vy, real& vz){
+                auto vel = velocityProfile.value()(x,y,z);
+                vx = std::get<0>(vel);            
+                vy = std::get<1>(vel);            
+                vz = std::get<2>(vel);            
+            });
+        }, py::arg("side_type"), py::arg("vx"), py::arg("vy"), py::arg("vz"), py::arg("velocity_profile"))
         .def("set_pressure_boundary_condition", &MultipleGridBuilderFacade::setPressureBoundaryCondition, py::arg("side_type"), py::arg("rho"))
         .def("set_no_slip_boundary_condition", &MultipleGridBuilderFacade::setNoSlipBoundaryCondition, py::arg("side_type"))
         .def("set_stress_boundary_condition", &MultipleGridBuilderFacade::setStressBoundaryCondition, py::arg("side_type"), py::arg("normal_x"), py::arg("normal_y"), py::arg("normal_z"), py::arg("sampling_offset"), py::arg("von_karman_constant"), py::arg("roughness_length"), py::arg("delta_x"), py::arg("roughness_map")=nullptr)
