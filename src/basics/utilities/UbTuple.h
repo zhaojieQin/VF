@@ -211,6 +211,18 @@ inline bool operator<(UbDuo<T1, T2> const &d1, UbDuo<U1, U2> const &d2)
     return false;
 }
 
+template <typename T1, typename T2, typename U1, typename U2>
+inline bool operator>(UbDuo<T1, T2> const &d1, UbDuo<U1, U2> const &d2)
+{
+    if (d1.v1() > d2.v1())
+        return true;
+    else if (d1.v1() == d2.v1())
+        return d1.v2() > d2.v2();
+
+    return false;
+}
+
+
 template <typename T1, typename T2>
 std::ostream &operator<<(std::ostream &os, UbDuo<T1, T2> const &d1)
 {
