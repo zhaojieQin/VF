@@ -45,7 +45,9 @@
 #include <thrust/execution_policy.h>
 #include <thrust/inner_product.h>
 #include <thrust/iterator/permutation_iterator.h>
+#include <thrust/iterator/zip_iterator.h>
 #include <thrust/reduce.h>
+#include <thrust/tuple.h>
 
 #include <basics/DataTypes.h>
 #include <basics/constants/NumericConstants.h>
