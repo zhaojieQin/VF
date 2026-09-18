@@ -65,12 +65,13 @@
 #include "gpu/core/GridScaling/GridScalingFactory.h"
 #include "gpu/core/Kernel/KernelTypes.h"
 #include "gpu/core/Parameter/Parameter.h"
+#include "gpu/core/PreCollisionInteractor/Forest.h"
+#include "gpu/core/PreProcessor/InitializationFunctions.h"
 #include "gpu/core/Samplers/PlanarAverageProbe.h"
 #include "gpu/core/Samplers/PrecursorWriter.h"
 #include "gpu/core/Samplers/Probe.h"
 #include "gpu/core/Samplers/WallModelProbe.h"
 #include "gpu/core/TurbulenceModels/TurbulenceModelFactory.h"
-#include "gpu/core/PreCollisionInteractor/Forest.h"
 #include "grid/Grid.h"
 #include "grid/GridDimensions.h"
 
@@ -92,8 +93,8 @@ void run(const vf::basics::ConfigurationFile& config)
 
     const real boundaryLayerHeight = config.getValue("BoundaryLayerHeight", 1000.0);
 
-    const real lengthX = 6*boundaryLayerHeight;
-    const real lengthY = 4*boundaryLayerHeight;
+    const real lengthX = 6 * boundaryLayerHeight;
+    const real lengthY = 4 * boundaryLayerHeight;
     const real lengthZ = boundaryLayerHeight;
 
     const real roughnessLength = config.getValue("RoughnessLength", c1o10);
@@ -119,15 +120,12 @@ void run(const vf::basics::ConfigurationFile& config)
 
     PlantAreaDensityFunction plantAreaDensityFunction;
 
-    if (plantAreaDensityFunctionMap == "BottomHeavy") {
+    if (plantAreaDensityFunctionMap == "BottomHeavy")
         plantAreaDensityFunction = PlantAreaDensityFunction::BottomHeavy;
-    }
-    else if (plantAreaDensityFunctionMap == "TopHeavy") {
+    else if (plantAreaDensityFunctionMap == "TopHeavy")
         plantAreaDensityFunction = PlantAreaDensityFunction::TopHeavy;
-    }
-    else {
+    else
         plantAreaDensityFunction = PlantAreaDensityFunction::Flat;
-    }
 
     const bool useDistributionsForPrecursor = config.getValue<bool>("UseDistributions", false);
     std::string precursorDirectory = config.getValue<std::string>("PrecursorDirectory", "precursor/");
@@ -242,42 +240,20 @@ void run(const vf::basics::ConfigurationFile& config)
     std::iota(devices.begin(), devices.end(), 0);
     para->setDevices(devices);
     para->setMaxDev(numberOfProcesses);
-    if (usePrecursorInflow) {
-        para->setInitialCondition([&](real, real, real coordZ, real& rho, real& vx, real& vy, real& vz) {
-            rho = c0o1;
-            vx = velocityProfile(coordZ) * deltaT / deltaX;
-            vy = c0o1;
-            vz = c0o1;
-        });
-    } else {
-        para->setInitialCondition([&](real coordX, real coordY, real coordZ, real& rho, real& vx, real& vy, real& vz) {
-            const real relativeX = coordX / lengthX;
-            const real relativeY = coordY / lengthY;
-            const real relativeZ = coordZ / lengthZ;
-
-            const real horizontalPerturbation = std::sin(cPi * c16o1 * relativeX);
-            const real verticalPerturbation = std::sin(cPi * c8o1 * relativeZ) / (std::pow(relativeZ, c2o1) + c1o1);
-            const real perturbation = c2o1 * horizontalPerturbation * verticalPerturbation;
-
-            rho = c0o1;
-            vx = (velocityProfile(coordZ) + perturbation) * (c1o1 - c1o10 * std::abs(relativeY - c1o2)) * deltaT / deltaX;
-            vy = perturbation * deltaT / deltaX;
-            vz = c8o1 * frictionVelocity / vonKarmanConstant *
-                 (std::sin(cPi * c8o1 * coordY / boundaryLayerHeight) * std::sin(cPi * c8o1 * relativeZ) +
-                  std::sin(cPi * c8o1 * relativeX)) /
-                 (std::pow(c1o2 * lengthZ - coordZ, c2o1) + c1o1) * deltaT / deltaX;
-        });
-    }
+    if (usePrecursorInflow)
+        para->setInitialCondition(vf::gpu::logLaw(frictionVelocity, vonKarmanConstant, roughnessLength, deltaX / deltaT));
+    else
+        para->setInitialCondition(vf::gpu::perturbedLogLaw(frictionVelocity, vonKarmanConstant, roughnessLength, lengthX,
+                                                           lengthY, lengthZ, boundaryLayerHeight, deltaX / deltaT));
 
     if (usePrecursorInflow) {
         if (processID == 0) {
-            auto precursor = createFileCollection(precursorDirectory , "precursor", TransientBCFileType::VTK);
+            auto precursor = createFileCollection(precursorDirectory, "precursor", TransientBCFileType::VTK);
             gridBuilderFacade->setPrecursorBoundaryCondition(SideType::MX, precursor, timestepsBetweenReadsPrecursor, false);
         }
 
         if (processID == numberOfProcesses - 1)
             gridBuilderFacade->setPressureBoundaryCondition(SideType::PX, c0o1);
-
     }
 
     gridBuilderFacade->setStressBoundaryCondition(SideType::MZ, c0o1, c0o1, c1o1, samplingOffsetWallModel, vonKarmanConstant,
@@ -301,19 +277,21 @@ void run(const vf::basics::ConfigurationFile& config)
     if (useCoriolisForce) {
         para->setIsBodyForce(true);
         para->setAllNodesAllFeatures(true);
-        auto coriolisForce = std::make_shared<CoriolisForce>(para, cudaMemoryManager, geostrophicWindSpeed*std::cos(geostrophicWindDirection),
-                                                             geostrophicWindDirection*std::sin(geostrophicWindDirection), coriolisParameter);
+        auto coriolisForce = std::make_shared<CoriolisForce>(
+            para, cudaMemoryManager, geostrophicWindSpeed * std::cos(geostrophicWindDirection),
+            geostrophicWindDirection * std::sin(geostrophicWindDirection), coriolisParameter);
         para->addInteractor(coriolisForce);
     }
 
     if (useForest) {
         para->setIsBodyForce(true);
-        SPtr<Forest> forest = std::make_shared<Forest>(para, cudaMemoryManager, forestHeight, forestDragCoefficient, plantAreaIndex, 0, plantAreaDensityFunction);
+        SPtr<Forest> forest = std::make_shared<Forest>(para, cudaMemoryManager, forestHeight, forestDragCoefficient,
+                                                       plantAreaIndex, 0, plantAreaDensityFunction);
         para->addInteractor(forest);
         if (useRefinement) {
-            SPtr<Forest> forestOne = std::make_shared<Forest>(para, cudaMemoryManager, forestHeight, forestDragCoefficient, plantAreaIndex, 1, plantAreaDensityFunction);
+            SPtr<Forest> forestOne = std::make_shared<Forest>(para, cudaMemoryManager, forestHeight, forestDragCoefficient,
+                                                              plantAreaIndex, 1, plantAreaDensityFunction);
             para->addInteractor(forestOne);
-
         }
     }
     //////////////////////////////////////////////////////////////////////////
@@ -380,9 +358,10 @@ void run(const vf::basics::ConfigurationFile& config)
     VF_LOG_INFO("process parameters:");
     VF_LOG_INFO("Number of Processes {} process ID {}", numberOfProcesses, processID);
     printf("\n");
-    
-    para->worldLength = lengthX + c2o1*deltaX;
-    Simulation simulation(para, cudaMemoryManager, gridBuilderFacade->getGridBuilder(), &bcFactory, tmFactory, &scalingFactory);
+
+    para->worldLength = lengthX + c2o1 * deltaX;
+    Simulation simulation(para, cudaMemoryManager, gridBuilderFacade->getGridBuilder(), &bcFactory, tmFactory,
+                          &scalingFactory);
     simulation.run();
 }
 

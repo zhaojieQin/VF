@@ -28,16 +28,15 @@
 //
 //! \author Henry Korb
 //=======================================================================================
-#include <random>
-
-#include <pybind11/functional.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
+#include <pybind11/numpy.h>
 
 #include <basics/config/ConfigurationFile.h>
 #include <basics/constants/NumericConstants.h>
 #include <gpu/core/Parameter/Parameter.h>
 #include <gpu/core/PreCollisionInteractor/PreCollisionInteractor.h>
+#include <gpu/core/PreProcessor/InitializationFunctions.h>
 
 using namespace vf::basics::constant;
 
@@ -82,72 +81,9 @@ namespace gpu_bindings::parameter
             .def("configure_main_kernel", &Parameter::configureMainKernel, py::arg("kernel"))
             .def("set_AD_kernel", &Parameter::setADKernel, py::arg("ad_kernel"))
             .def("set_outflow_pressure_correction_factor", &Parameter::setOutflowPressureCorrectionFactor, py::arg("correction_factor"))
-            .def(
-                "set_initial_condition",
-                [](Parameter& para, std::function<std::vector<float>(real, real, real)>& init_func) {
-                    para.setInitialCondition([init_func](real coordX, real coordY, real coordZ, real& rho, real& vx, real& vy, real& vz) {
-                        std::vector<float> values = init_func(coordX, coordY, coordZ);
-                        rho = values[0];
-                        vx = values[1];
-                        vy = values[2];
-                        vz = values[3];
-                    });
-                },
-                py::arg("init_func"))
-            .def(
-                "set_initial_condition_uniform",
-                [](Parameter& para, real velocity_x, real velocity_y, real velocity_z) {
-                    para.setInitialCondition(
-                        [velocity_x, velocity_y, velocity_z](real, real, real, real& rho, real& vx, real& vy, real& vz) // must capture values explicitly!
-                            {
-                                rho = c0o1;
-                                vx = velocity_x;
-                                vy = velocity_y;
-                                vz = velocity_z;
-                            });
-                },
-                py::arg("velocity_x"), py::arg("velocity_y"), py::arg("velocity_z"))
-            .def(
-                "set_initial_condition_log_law",
-                [](Parameter& para, real u_star, real z0, real velocityRatio) {
-                    para.setInitialCondition([u_star, z0, velocityRatio](real, real, real coordZ, real& rho, real& vx, real& vy, real& vz) {
-                        coordZ = std::max(coordZ, c0o1);
-                        rho = c0o1;
-                        vx = u_star / c4o10 * std::log1p(coordZ / z0) / velocityRatio;
-                        vy = c0o1;
-                        vz = c0o1;
-                    });
-                },
-                py::arg("u_star"), py::arg("z0"), py::arg("velocity_ratio"))
-            .def(
-                "set_initial_condition_perturbed_log_law",
-                [](Parameter& para, real u_star, real z0, real L_x, real L_z, real H, real velocityRatio) {
-                    para.setInitialCondition([u_star, z0, L_x, L_z, H, velocityRatio](real coordX, real coordY, real coordZ, real& rho, real& vx, real& vy, real& vz) {
-                        coordZ = std::max(coordZ, c0o1);
-                        rho = c0o1;
-                        vx = (u_star / c4o10 * std::log1p(coordZ / z0) + c2o1 * std::sin(cPi * c16o1 * coordX / L_x) * std::sin(cPi * c8o1 * coordZ / H) / (std::pow(coordZ / H, c2o1) + c1o1)) / velocityRatio;
-                        vy = c2o1 * std::sin(cPi * c16o1 * coordX / L_x) * std::sin(cPi * c8o1 * coordZ / H) / (std::pow(coordZ / H, c2o1) + c1o1) / velocityRatio;
-                        vz = c8o1 * u_star / c4o10 * (std::sin(cPi * c8o1 * coordY / H) * std::sin(cPi * c8o1 * coordZ / H) + std::sin(cPi * c8o1 * coordX / L_x)) / (std::pow(c1o2 * L_z - coordZ, c2o1) + c1o1) / velocityRatio;
-                    });
-                },
-                py::arg("u_star"), py::arg("z0"), py::arg("length_x"), py::arg("length_z"), py::arg("height"), py::arg("velocity_ratio"))
-            .def("set_initial_condition_AD_uniform", [](Parameter& para, real concentration) { para.setInitialConditionAD([concentration](real, real, real) { return concentration; }); }, py::arg("concentration"))
-            .def("set_initial_condition_AD_constant_gradient", [](Parameter& para, real concentrationAtGround, real gradient) { para.setInitialConditionAD([concentrationAtGround, gradient](real, real, real z) { return concentrationAtGround + gradient*z; }); }, py::arg("concentration_at_ground"), py::arg("gradient"))
-            .def(
-                "add_perturbation_to_initial_condition_AD", 
-                [](Parameter& para, real perturbationStrength, real maximumHeightOfPerturbation) {
-                    auto unPerturbedFunction = para.getInitialConditionAD();
-                    para.setInitialConditionAD([=](real x, real y, real z){
-                        const real unPerturbedValue = unPerturbedFunction(x,y,z);
-                    static std::uniform_real_distribution<real> distribution(-perturbationStrength, perturbationStrength);
-                    static std::default_random_engine engine(42);
-                    if(z < maximumHeightOfPerturbation)
-                        return unPerturbedValue + distribution(engine);
-                    return unPerturbedValue;
-                    });
-                }, 
-                py::arg("perturbation_strength"), py::arg("maximum_height_of_perturbation"))
-            .def("set_initial_reference_temperature_uniform", [](Parameter& para, real referenceTemperature) { para.setInitialLocalReferenceTemperature([referenceTemperature](real, real, real) { return referenceTemperature; }); })
+            .def("set_initial_condition", py::overload_cast<const std::function<std::tuple<real, real, real, real>(real, real, real)>&>(&Parameter::setInitialCondition), py::arg("init_func"))
+            .def("set_initial_condition_AD", &Parameter::setInitialConditionAD, py::arg("init_func"))
+            .def("set_initial_local_reference_temperature", &Parameter::setInitialLocalReferenceTemperature, py::arg("init_func"))
             .def("add_interactor", &Parameter::addInteractor, py::arg("interactor"))
             .def("add_sampler", &Parameter::addSampler, py::arg("sampler"))
             .def("get_output_path", &Parameter::getOutputPath)

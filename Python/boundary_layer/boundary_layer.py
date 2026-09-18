@@ -150,7 +150,7 @@ bc_factory.set_stress_boundary_condition(gpu.StressBC.StressBounceBackCompressib
 bc_factory.set_slip_boundary_condition(gpu.SlipBC.SlipCompressible)
 para.set_outflow_pressure_correction_factor(0.0)
 # %%
-para.set_initial_condition_perturbed_log_law(u_star, z0, length[0], length[2], boundary_layer_height, dx / dt)
+para.set_initial_condition(gpu.initialization_functions.perturbed_log_law(u_star, von_karman_constant, z0, length[0], length[1], length[2], boundary_layer_height, dx / dt))
 cuda_memory_manager = gpu.CudaMemoryManager(para)
 
 # %%

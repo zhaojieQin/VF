@@ -49,6 +49,7 @@
 //////////////////////////////////////////////////////////////////////////
 
 #include "PreCollisionInteractor/Actuator/ActuatorFarm.h"
+#include "PreProcessor/InitializationFunctions.h"
 #include "gpu/core/BoundaryConditions/BoundaryConditionFactory.h"
 #include "gpu/core/Calculation/Simulation.h"
 #include "gpu/core/Cuda/CudaMemoryManager.h"
@@ -61,6 +62,7 @@
 #include "gpu/core/PreCollisionInteractor/Actuator/ActuatorFarmStandalone.h"
 #include "gpu/core/Samplers/Probe.h"
 #include "gpu/core/TurbulenceModels/TurbulenceModelFactory.h"
+#include "gpu/core/PreProcessor/InitializationFunctions.h"
 
 //////////////////////////////////////////////////////////////////////////
 const std::string defaultConfigFile = "actuatorline.cfg";
@@ -187,12 +189,7 @@ void run(const vf::basics::ConfigurationFile& config)
     para->setDensityRatio(density);
     para->configureMainKernel(vf::collision_kernel::compressible::K17CompressibleNavierStokes);
 
-    para->setInitialCondition([&](real, real, real, real& rho, real& vx, real& vy, real& vz) {
-        rho = c0o1;
-        vx = velocityLB;
-        vy = c0o1;
-        vz = c0o1;
-    });
+    para->setInitialCondition(vf::gpu::uniform(c0o1, velocity, c0o1, c0o1, deltaX / deltaT));
 
     para->setTimestepStartOut(timeStepStartOut);
     para->setTimestepOut(timeStepOut);

@@ -1922,6 +1922,18 @@ void Parameter::setInitialCondition(
     this->initialCondition = initialCondition;
 }
 
+// overload without by-reference needed for python bindings. By-reference kept for backwards compability
+void Parameter::setInitialCondition(const std::function<std::tuple<real, real, real, real>(real, real, real)>& initialCondition){
+    setInitialCondition([=](real x, real y, real z, real& rho, real& vx, real& vy, real& vz){
+        auto [density, velX, velY, velZ] = initialCondition(x,y,z);
+        rho = density;
+        vx = velX;
+        vy = velY;
+        vz = velZ;
+    });
+}
+
+
 std::function<void(real, real, real, real &, real &, real &, real &)> &Parameter::getInitialCondition()
 {
     return this->initialCondition;

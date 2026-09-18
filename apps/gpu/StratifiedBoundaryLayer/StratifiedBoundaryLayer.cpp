@@ -67,6 +67,7 @@
 #include <gpu/GridGenerator/grid/BoundaryConditions/Side.h>
 #include <gpu/GridGenerator/grid/GridBuilder/MultipleGridBuilder.h>
 #include <gpu/GridGenerator/grid/MultipleGridBuilderFacade.h>
+#include "gpu/core/PreProcessor/InitializationFunctions.h"
 
 #include <parallel/MPICommunicator.h>
 
@@ -75,61 +76,8 @@
 using namespace vf::basics::constant;
 using namespace vf::gpu;
 
-using temperatureProfileFunc = std::function<real(real)>;
-using velocityProfileFunc = std::function<std::tuple<real, real, real, real>(real, real, real)>;
-
 const std::string defaultConfigFile("sabl.cfg");
 const std::string simulationName("BoundaryLayer");
-
-temperatureProfileFunc getTemperatureFuncConstantLapseRate(real surfaceTemperature, real lapseRate)
-{
-    return [=](real coordZ) { return surfaceTemperature + coordZ * lapseRate; };
-}
-
-temperatureProfileFunc getTemperatureFuncTwoLayers(real surfaceTemperature, real inversionHeight, real lapseRate)
-{
-    return [=](real coordZ) { return surfaceTemperature + lapseRate * std::max(coordZ - inversionHeight, c0o1); };
-}
-
-//! follows <a href="https://doi.org/10.1175/1520-0450(2004)043<0925:AMTDTC>2.0.CO;2"> Rampanelli and Zardi (2004) </a>
-temperatureProfileFunc getTemperatureFuncAllaerts(real inversionHeight, real inversionThickness, real inversionStrength,
-                                                  real lapseRate, real surfaceTemperature)
-{
-    return [=](real coordZ) {
-        const real eta = c3o1 * (coordZ - inversionHeight) / inversionThickness;
-        const real fBelowInversion = (std::tanh(eta) + c1o1) * c1o2;
-        const real fAboveInversion = (std::log(c2o1 * std::cosh(eta)) + eta) * c1o2;
-        return inversionStrength * fBelowInversion + c1o3 * lapseRate * inversionThickness * fAboveInversion +
-               surfaceTemperature;
-    };
-}
-
-velocityProfileFunc getConstantVelocityProfile(real geostrophicWindX, real geostrophicWindY)
-{
-    return [=](real, real, real) { return std::tuple { geostrophicWindX, geostrophicWindY, c0o1, c0o1 }; };
-}
-
-velocityProfileFunc getVelocityProfileFuncAllaerts(real frictionVelocity, real roughnessLength, real rotationAngle,
-                                                   real inversionHeight, real coriolisParameter, real mergingRegionThickness,
-                                                   real geostrophicWind, real vonKarmanConstant)
-{
-    return [=](real, real, real coordZ) {
-        const real zeta = coordZ / inversionHeight;
-
-        const real f_u = 1.57F * zeta - 2.68F * zeta * zeta;
-        const real f_v = 13.2F * zeta - 8.7F * zeta * zeta;
-        const real u_ABL = frictionVelocity / vonKarmanConstant * (std::log(coordZ / roughnessLength) + f_u);
-        const real v_ABL = frictionVelocity / vonKarmanConstant * f_v * (coriolisParameter >= c0o1 ? c1o1 : -c1o1);
-
-        const real merging_factor = std::tanh((zeta - c1o2) * c2o1 * inversionHeight / mergingRegionThickness);
-
-        const real u = c1o2 * (u_ABL * (c1o1 - merging_factor) + geostrophicWind * (c1o1 + merging_factor));
-        const real v = c1o2 * (v_ABL * (c1o1 - merging_factor) + c0o1);
-
-        return std::tuple { u * std::cos(rotationAngle) - v * std::sin(rotationAngle),
-                            u * std::sin(rotationAngle) + v * std::cos(rotationAngle), c0o1, c0o1 };
-    };
-}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -203,29 +151,29 @@ void run(const vf::basics::ConfigurationFile& config)
     const real diffusivityLB = diffusivity * deltaT / (deltaX * deltaX);
     const real bruntVaisalaFrequency = std::sqrt(gravity / referenceTemperature * lapseRate);
 
-    temperatureProfileFunc initialTemperatureProfileFunc;
-    velocityProfileFunc initialVelocityProfileFunc;
+    InitialConditionAD initialTemperatureProfileFunc;
+    InitialCondition initialVelocityProfileFunc;
     if (initialTemperatureProfile == "ConstantLapseRate") {
-        initialTemperatureProfileFunc = getTemperatureFuncConstantLapseRate(surfaceTemperature, lapseRate);
+        initialTemperatureProfileFunc = constantGradient(surfaceTemperature, lapseRate);
     } else if (initialTemperatureProfile == "TwoLayers") {
-        initialTemperatureProfileFunc = getTemperatureFuncTwoLayers(surfaceTemperature, inversionHeight, lapseRate);
+        initialTemperatureProfileFunc = twoLayers(surfaceTemperature, inversionHeight, lapseRate);
     } else if (initialTemperatureProfile == "ALLAERTS") {
-        initialTemperatureProfileFunc = getTemperatureFuncAllaerts(inversionHeight, inversionThickness, inversionStrength,
-                                                                   lapseRate, surfaceTemperature);
+        initialTemperatureProfileFunc = profileRampanelliAndZardi(surfaceTemperature, inversionHeight, inversionThickness, inversionStrength,
+                                                                   lapseRate);
     } else
         throw std::runtime_error(
             "Unrecognized temperature initialization profile! Must be TwoLayers, ALLAERTS or ConstantLapseRate");
 
     if (initialVelocityProfile == "Constant")
-        initialVelocityProfileFunc = getConstantVelocityProfile(geostrophicWindX, geostrophicWindY);
+        initialVelocityProfileFunc = uniform(c0o1, geostrophicWindX, geostrophicWindY, c0o1, deltaX / deltaT);
     else if (initialVelocityProfile == "ALLAERTS")
         initialVelocityProfileFunc =
-            getVelocityProfileFuncAllaerts(frictionVelocity, roughnessLength, windDirection, inversionHeight,
-                                           coriolisParameter, mergingRegionThickness, geostrophicWind, vonKarmanConstant);
+            profileZilitenkevich(frictionVelocity, vonKarmanConstant, roughnessLength, inversionHeight, mergingRegionThickness, 
+                                           geostrophicWind, windDirection, deltaX / deltaT);
     else
         throw std::runtime_error("Unrecognized velocity initialization profile, must be Constant or ALLAERTS");
 
-    const real temperatureTop = initialTemperatureProfileFunc(lengthZ);
+    const real temperatureTop = initialTemperatureProfileFunc(c0o1, c0o1, lengthZ);
 
     VF_LOG_INFO("velocity  [dx/dt] = {:3.3f}", velocityLB);
     VF_LOG_INFO("dt   = {:3.2f}s", deltaT);
@@ -296,26 +244,11 @@ void run(const vf::basics::ConfigurationFile& config)
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Initial Conditions
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    para->setInitialCondition([&](real coordX, real coordY, real coordZ, real& rho, real& vx, real& vy, real& vz) {
-        auto [vxSI, vySI, vzSI, rhoSI] = initialVelocityProfileFunc(coordX, coordY, coordZ);
-        vx = vxSI * deltaT / deltaX;
-        vy = vySI * deltaT / deltaX;
-        vz = vzSI * deltaT / deltaX;
-        rho = rhoSI;
-    });
+    para->setInitialCondition(initialVelocityProfileFunc);
 
-    auto randomDistributionTemp =
-        std::uniform_real_distribution<real>(-temperaturePerturbationStrength, temperaturePerturbationStrength);
-    auto randomGenerator = std::default_random_engine(42);
+    para->setInitialConditionAD(addRandomPerturbation(initialTemperatureProfileFunc, temperaturePerturbationStrength, temperaturePerturbationHeight));
 
-    para->setInitialConditionAD([&](real, real, real coordZ) {
-        if (coordZ < temperaturePerturbationHeight)
-            return initialTemperatureProfileFunc(coordZ) + randomDistributionTemp(randomGenerator);
-        return initialTemperatureProfileFunc(coordZ);
-    });
-
-    para->setInitialLocalReferenceTemperature(
-        [&](real, real, real coordZ) -> real { return initialTemperatureProfileFunc(coordZ); });
+    para->setInitialLocalReferenceTemperature(initialTemperatureProfileFunc);
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Set parameters

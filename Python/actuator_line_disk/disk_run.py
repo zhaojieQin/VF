@@ -172,7 +172,7 @@ for thrust_coefficient in thrust_coefficients :
     bc_factory.set_pressure_boundary_condition(gpu.PressureBC.OutflowNonReflective)
 
     para.set_outflow_pressure_correction_factor(0.0)
-    para.set_initial_condition_uniform(velocity_lb, 0.0, 0.0)
+    para.set_initial_condition(gpu.initialization_functions.uniform(0, velocity_inlet, 0, 0, velocity_ratio))
     para.set_output_path(str(case_raw_path))
     para.set_output_prefix("fields/disk")
     para.set_print_files(flag_print_files)
