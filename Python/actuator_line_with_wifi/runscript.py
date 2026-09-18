@@ -164,7 +164,7 @@ def main(sim_name: str, config_file: Path, turbine_file: Path, controller_file: 
 
     para.set_outflow_pressure_correction_factor(0.0)
 
-    para.set_initial_condition_uniform(velocity_LB, 0, 0)
+    para.set_initial_condition(gpu.initialization_functions.uniform(0, velocity, 0, 0, velocity_ratio))
 
 
     logging_config = LoggerConfig("wifi", output_path, start_time_instantaneous=10, period_instantaneous=10, log_period_statistics=10, log_start_time_statistics=10, sample_period_statistics=10, sample_start_time_statistics=10)

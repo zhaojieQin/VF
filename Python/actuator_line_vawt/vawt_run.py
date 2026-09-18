@@ -249,7 +249,7 @@ bc_factory.set_pressure_boundary_condition(gpu.PressureBC.OutflowNonReflective)
 para.set_outflow_pressure_correction_factor(0.0)
 
 # initial conditions
-para.set_initial_condition_uniform(velocity_lb, 0.0, 0.0)
+para.set_initial_condition(gpu.initialization_functions.uniform(0, velocity_inlet, 0, 0, velocity_ratio))
 
 # load parameters into cuda memory manager
 cuda_memory_manager = gpu.CudaMemoryManager(para)

@@ -742,6 +742,7 @@ public:
     ////////////////////////////////////////////////////////////////////////////
     // initial condition fluid
     void setInitialCondition(std::function<void(real, real, real, real &, real &, real &, real &)> initialCondition);
+    void setInitialCondition(const std::function<std::tuple<real, real, real, real>(real, real, real)>& initialCondition);
     std::function<void(real, real, real, real &, real &, real &, real &)>& getInitialCondition();
 
     // initial condition concentration

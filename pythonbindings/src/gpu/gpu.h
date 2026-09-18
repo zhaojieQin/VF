@@ -48,6 +48,7 @@
 #include "submodules/coriolis_force.h"
 #include "submodules/damping_layer.h"
 #include "submodules/buoyancy_provider.h"
+#include "submodules/initialization_functions.h"
 
 namespace gpu_bindings
 {
@@ -76,5 +77,6 @@ inline void makeModule(py::module_& pyfluids)
     kernel::makeModule(gpu);
     damping_layer::makeModule(gpu);
     buoyancy_provider::makeModule(gpu);
+    initialization_functions::makeModule(gpu);
 }
 } // namespace gpu_bindings

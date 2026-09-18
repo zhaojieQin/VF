@@ -53,6 +53,7 @@
 #include "gpu/core/BoundaryConditions/BoundaryConditionFactory.h"
 #include "gpu/core/Calculation/Simulation.h"
 #include "gpu/core/Parameter/Parameter.h"
+#include "gpu/core/PreProcessor/InitializationFunctions.h"
 
 using namespace vf::gpu;
 
@@ -137,17 +138,7 @@ void run(const vf::basics::ConfigurationFile& config)
 
     para->setVelocityRatio(1.0 / velocityLB);
 
-    para->setInitialCondition([&](real coordX, real coordY, real coordZ, real& rho, real& vx, real& vy, real& vz) {
-        real a = 1.0;
-        real b = 1.0;
-        real c = 1.0;
-
-        rho = 3.0 * ((velocityLB * velocityLB) / 16.0 * (cos(2.0 * a * coordX) + cos(2.0 * b * coordY)) *
-                     (cos(2.0 * c * coordZ) + 2.0));
-        vx = velocityLB * sin(a * coordX) * cos(b * coordY) * cos(c * coordZ);
-        vy = -velocityLB * cos(a * coordX) * sin(b * coordY) * cos(c * coordZ);
-        vz = 0.0;
-    });
+    para->setInitialCondition(TaylorGreenVortex(velocityLB));
 
     para->configureMainKernel(kernel);
 

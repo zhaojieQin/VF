@@ -189,7 +189,7 @@ para.set_outflow_pressure_correction_factor(0.0)
 #         2.0*np.sin(np.pi*16.*coord_x/length[0])*np.sin(np.pi*8.*coord_z/boundary_layer_height)/(np.square(coord_z/boundary_layer_height)+1.)  * dt / dx,
 #         8.0*u_star/0.4*(np.sin(np.pi*8.0*coord_y/boundary_layer_height)*np.sin(np.pi*8.0*coord_z/boundary_layer_height)+np.sin(np.pi*8.0*coord_x/length[0]))/(np.square(length[2]/2.0-coord_z)+1.) * dt / dx]
 # para.set_initial_condition(init_func)
-para.set_initial_condition_perturbed_log_law(u_star, z0, length[0], length[2], boundary_layer_height, velocity_ratio)
+para.set_initial_condition(gpu.initialization_functions.perturbed_log_law(u_star, kappa, z0, length[0], length[1], length[2], boundary_layer_height, velocity_ratio))
 
 # %%
 cuda_memory_manager = gpu.CudaMemoryManager(para)

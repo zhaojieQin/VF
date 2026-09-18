@@ -58,6 +58,7 @@
 #include "gpu/core/PreCollisionInteractor/Actuator/ActuatorFarmStandalone.h"
 #include "gpu/core/Samplers/Probe.h"
 #include "gpu/core/TurbulenceModels/TurbulenceModelFactory.h"
+#include "gpu/core/PreProcessor/InitializationFunctions.h"
 
 namespace
 {
@@ -318,12 +319,8 @@ void run(const vf::basics::ConfigurationFile& config)
     para->setDensityRatio(c1o1);
     para->setOutflowPressureCorrectionFactor(c0o1);
     para->configureMainKernel(vf::collision_kernel::compressible::K17CompressibleNavierStokes);
-    para->setInitialCondition([velocityLB](real, real, real, real& rho, real& vx, real& vy, real& vz) {
-        rho = c0o1;
-        vx = velocityLB;
-        vy = c0o1;
-        vz = c0o1;
-    });
+    para->setInitialCondition(vf::gpu::uniform(c0o1, velocityInlet, c0o1, c0o1, deltaX / deltaT));
+
     para->setTimestepStartOut(timeStepStartWriteField);
     para->setTimestepOut(timeStepIntervalWriteField);
     para->setTimestepEnd(timeStepEnd);
