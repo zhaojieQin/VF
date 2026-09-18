@@ -60,8 +60,8 @@ RUN apt-get update &&   \
     python3.12-venv     \
     python3.12-dev      \
     cppcheck            \
-    # needed for doxygen
-    flex bison 
+    sudo                \
+    doxygen
 
 RUN update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-14 100 \
     && update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-14 100 \
@@ -73,9 +73,8 @@ RUN update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-14 100 \
 
 RUN pip3 install cmake==3.26.3 --break-system-packages
 
-RUN wget https://www.doxygen.nl/files/doxygen-1.9.8.src.tar.gz && tar -xvf doxygen-1.9.8.src.tar.gz \
-    && cd doxygen-1.9.8 && mkdir build && cd build && cmake -G "Unix Makefiles" .. && make -j8 && make install
     
+RUN echo "${USERNAME}:ubuntu" | chpasswd
 USER $USERNAME:$GID
 
 RUN python3 -m venv $VIRTUAL_ENV \
