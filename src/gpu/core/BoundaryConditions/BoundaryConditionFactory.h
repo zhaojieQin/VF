@@ -133,6 +133,13 @@ public:
     // enum class OutflowBoundaryCondition {};  // TODO:
     // https://git.rz.tu-bs.de/m.schoenherr/VirtualFluids_dev/-/issues/16
 
+    enum class FreestreamBC {
+        //! - FreestreamInterpolatedCompressible: WRF-driven inflow/outflow per node based on u_n sign
+        FreestreamInterpolatedCompressible,
+        //! - NotSpecified: the user did not set a boundary condition
+        NotSpecified
+    };
+
     enum class PrecursorBC {
         //! - VelocityPrecursor
         PrecursorNonReflectiveCompressible,
@@ -209,6 +216,7 @@ public:
     void setPressureBoundaryCondition(BoundaryConditionFactory::PressureBC boundaryConditionType);
     void setStressBoundaryCondition(BoundaryConditionFactory::StressBC boundaryConditionType);
     void setPrecursorBoundaryCondition(BoundaryConditionFactory::PrecursorBC boundaryConditionType);
+    void setFreestreamBoundaryCondition(BoundaryConditionFactory::FreestreamBC boundaryConditionType);
     //! \brief set a boundary condition for the geometry
     //! param boundaryConditionType: a velocity, no-slip or slip boundary condition
     //! \details suggestions for boundaryConditionType:
@@ -235,6 +243,7 @@ public:
     [[nodiscard]] virtual std::variant<BoundaryConditionKernel, DirectionalBoundaryConditionKernel> getPressureBoundaryConditionPre() const;
     [[nodiscard]] BoundaryConditionKernel getStressBoundaryConditionPost() const;
     [[nodiscard]] PrecursorBoundaryConditionKernel getPrecursorBoundaryConditionPost() const;
+    [[nodiscard]] BoundaryConditionKernel getFreestreamBoundaryConditionPost() const;
     [[nodiscard]] AdvectionDiffusionNoFluxBoundaryConditionKernel getAdvectionDiffusionNoFluxBoundaryConditionPost() const;
     [[nodiscard]] AdvectionDiffusionFluxBoundaryConditionKernel getAdvectionDiffusionFluxBoundaryConditionPost() const;
     [[nodiscard]] AdvectionDiffusionDirichletBoundaryConditionKernel getAdvectionDiffusionDirichletBoundaryConditionPost() const;
@@ -259,6 +268,7 @@ private:
     std::pair<StressBC, SurfaceLayerBC> surfaceLayerBoundaryCondition = {StressBC::NotSpecified, SurfaceLayerBC::NotSpecified};
 
     // OutflowBoundaryConditon outflowBC // TODO: https://git.rz.tu-bs.de/m.schoenherr/VirtualFluids_dev/-/issues/16
+    FreestreamBC freestreamBoundaryCondition = FreestreamBC::NotSpecified;
 };
 
 }

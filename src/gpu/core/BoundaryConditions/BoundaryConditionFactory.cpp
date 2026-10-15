@@ -47,6 +47,7 @@
 #include "BoundaryConditions/AdvectionDiffusion/AdvectionDiffusion.h"
 #include "BoundaryConditions/Stress/SurfaceLayer.h"
 #include "Parameter/Parameter.h"
+#include "BoundaryConditions/Freestream/FreestreamInterpolatedCompressible.cuh"
 
 namespace vf::gpu {
 
@@ -88,6 +89,10 @@ void BoundaryConditionFactory::setSurfaceLayerBoundaryCondition(StressBC momentu
 void BoundaryConditionFactory::setPrecursorBoundaryCondition(PrecursorBC boundaryConditionType)
 {
     this->precursorBoundaryCondition = boundaryConditionType;
+}
+void BoundaryConditionFactory::setFreestreamBoundaryCondition(FreestreamBC boundaryConditionType)
+{
+    this->freestreamBoundaryCondition = boundaryConditionType;
 }
 void BoundaryConditionFactory::setAdvectionDiffusionNoFluxBoundaryCondition(AdvectionDiffusionNoFluxBC boundaryConditionType)
 {
@@ -327,6 +332,13 @@ BoundaryConditionKernel BoundaryConditionFactory::getSurfaceLayerBoundaryConditi
         return SurfaceLayerBounceBackWithPressureCompressibleSurfaceTemperature;
     if (this->surfaceLayerBoundaryCondition == std::pair(StressBC::StressInterpolatedCompressible, SurfaceLayerBC::SurfaceTemperature))
         return SurfaceLayerInterpolatedCompressibleSurfaceTemperature;
+    return nullptr;
+}
+
+BoundaryConditionKernel BoundaryConditionFactory::getFreestreamBoundaryConditionPost() const
+{
+    if (this->freestreamBoundaryCondition == FreestreamBC::FreestreamInterpolatedCompressible)
+        return FreestreamInterpolatedCompressible;
     return nullptr;
 }
 

@@ -136,6 +136,9 @@ struct LBMSimulationParameter {
     //! \brief stores the outflow boundary condition data
     QforBoundaryConditions outflowBC;
     //////////////////////////////////////////////////////////////////////////
+    //! \brief stores the freestream (WRF-driven inflow/outflow) boundary condition data
+    QforBoundaryConditions freestreamBC;
+    //////////////////////////////////////////////////////////////////////////
     //! \brief stores the stress boundary condition data
     QforBoundaryConditions stressBC;
     //////////////////////////////////////////////////////////////////////////

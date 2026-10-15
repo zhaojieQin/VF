@@ -1,0 +1,2 @@
+✗ Failed to import pyfluids: No module named 'pyfluids'
+  Make sure the conda env 'vf' is active: conda activate vf

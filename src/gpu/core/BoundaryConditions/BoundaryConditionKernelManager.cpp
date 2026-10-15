@@ -67,6 +67,7 @@ BoundaryConditionKernelManager::BoundaryConditionKernelManager(SPtr<Parameter> p
     this->ADDirectionalBoundaryConditionPost = bcFactory->getAdvectionDiffusionDirectionalBoundaryConditionPost();
 
     this->surfaceLayerBoundaryConditionPost = bcFactory->getSurfaceLayerBoundaryConditionPost();
+    this->freestreamBoundaryConditionPost = bcFactory->getFreestreamBoundaryConditionPost();
 
     if (bcFactory->hasDirectionalPressureBoundaryCondition())
         this->directionalPressureBoundaryConditionPre =
@@ -103,6 +104,8 @@ BoundaryConditionKernelManager::BoundaryConditionKernelManager(SPtr<Parameter> p
                         "AdvectionDiffusionDirectionalBoundaryConditionPost");
     checkBoundaryCondition(this->surfaceLayerBoundaryConditionPost, this->para->getParD(0)->surfaceLayerBC,
                            "surfaceLayerBoundaryConditionPost");
+    checkBoundaryCondition(this->freestreamBoundaryConditionPost, this->para->getParD(0)->freestreamBC,
+                           "freestreamBoundaryConditionPost");
 }
 
 void BoundaryConditionKernelManager::runVelocityBCKernelPre(int level) const
@@ -369,6 +372,11 @@ void BoundaryConditionKernelManager::runNoSlipBCKernelPost(int level) const{
 void BoundaryConditionKernelManager::runSurfaceLayerBCKernelPost(const int level) const{
     if (para->getParD(level)->surfaceLayerBC.numberOfBCnodes > 0)
         surfaceLayerBoundaryConditionPost(para->getParD(level).get(), &(para->getParD(level)->surfaceLayerBC));
+}
+
+void BoundaryConditionKernelManager::runFreestreamBCKernelPost(const int level) const{
+    if (para->getParD(level)->freestreamBC.numberOfBCnodes > 0)
+        freestreamBoundaryConditionPost(para->getParD(level).get(), &(para->getParD(level)->freestreamBC));
 }
 
 void BoundaryConditionKernelManager::runPrecursorBCKernelPost(int level, uint t, CudaMemoryManager* cudaMemoryManager)

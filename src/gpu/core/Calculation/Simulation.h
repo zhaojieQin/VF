@@ -103,6 +103,22 @@ public:
     //! \brief finalize simulation. Only needs to be called when using calculateTimestep!
     void finalize();
 
+    // Getters for Python bindings
+    SPtr<Parameter> getParameter() const { return para; }
+    std::shared_ptr<CudaMemoryManager> getCudaMemoryManager() const { return cudaMemoryManager; }
+
+    // Velocity BC interface for Python bindings
+    void getVelocityBCCoordinates(int level, real* coords_out, uint n_bc) const;
+    void updateVelocityBC(int level, const real* u, const real* v, const real* w, uint n_bc);
+
+    // Surface layer BC interface for Python bindings (WRF-driven MOST)
+    void getSurfaceLayerBCCoordinates(int level, real* coords_out, uint n_bc) const;
+    void updateSurfaceLayerHeatFlux(int level, const real* hfx, uint n_bc);
+
+    // Freestream BC interface for Python bindings (WRF-driven open boundaries)
+    void getFreestreamBCCoordinates(int level, real* coords_out, uint n_bc) const;
+    void updateFreestreamBC(int level, const real* u, const real* v, const real* w, uint n_bc);
+
 private:
     void init(GridProvider &gridProvider, const BoundaryConditionFactory *bcFactory, SPtr<TurbulenceModelFactory> tmFactory, GridScalingFactory *scalingFactory);
     void allocNeighborsOffsetsScalesAndBoundaries(GridProvider& gridProvider, const BoundaryConditionFactory* bcFactory);

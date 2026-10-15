@@ -106,6 +106,9 @@ public:
     void runADDirectionalBCKernel(int level) const ;
         //! \brief calls the device function of the surface layer boundary condition (post-collision)
     void runSurfaceLayerBCKernelPost(int level) const;
+
+    //! \brief calls the device function of the freestream boundary condition (post-collision)
+    void runFreestreamBCKernelPost(int level) const;
 private:
     //! \brief check if a directional boundary condition was set
     //! \throws std::runtime_error if boundary nodes were assigned, but no boundary condition was set in the boundary condition factory
@@ -164,6 +167,7 @@ private:
     ADNeumannBoundaryConditionKernel ADNeumannBoundaryConditionPost = nullptr;
     DirectionalADBoundaryConditionKernel ADDirectionalBoundaryConditionPost = nullptr;
     BoundaryConditionKernel surfaceLayerBoundaryConditionPost = nullptr;
+    BoundaryConditionKernel freestreamBoundaryConditionPost = nullptr;
 
 };
 

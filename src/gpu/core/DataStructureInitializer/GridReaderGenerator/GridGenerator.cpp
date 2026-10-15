@@ -469,6 +469,30 @@ void GridGenerator::allocArrays_BoundaryValues(const BoundaryConditionFactory* b
         }
     }
 
+    // F R E E S T R E A M BC init (WRF-driven inflow/outflow on all lateral faces + roof)
+    for (uint level = 0; level < builder->getNumberOfGridLevels(); level++) {
+        const uint n = builder->getVelocitySize(level);
+        VF_LOG_INFO("size freestreamBC level {}: {}", level, n);
+        para->getParH(level)->freestreamBC.numberOfBCnodes = n;
+        para->getParD(level)->freestreamBC.numberOfBCnodes = n;
+        if (n > 1) {
+            cudaMemoryManager->cudaAllocFreestreamBC(level);
+
+            auto& bc = para->getParH(level)->freestreamBC;
+            builder->getFreestreamValues(bc.k, bc.kN, bc.normalX, bc.normalY, bc.normalZ, level);
+            builder->getVelocityQs(bc.q27, (int)level);
+
+            // Vx/Vy/Vz initialised to zero; RhoBC = 0 already (zero-initialised by cudaAlloc)
+            for (uint i = 0; i < n; i++) {
+                bc.Vx[i] = c0o1;
+                bc.Vy[i] = c0o1;
+                bc.Vz[i] = c0o1;
+            }
+
+            cudaMemoryManager->cudaCopyFreestreamBC(level);
+        }
+    }
+
     for (uint level = 0; level < builder->getNumberOfGridLevels(); level++) {
         const uint numberOfPrecursorValues = builder->getPrecursorSize(level);
         VF_LOG_INFO("size precursor level {}: {}", level, numberOfPrecursorValues);

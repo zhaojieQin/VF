@@ -63,7 +63,8 @@ namespace gpu_bindings::boundary_conditions
         .def("set_advection_diffusion_flux_boundary_condition", &BoundaryConditionFactory::setAdvectionDiffusionFluxBoundaryCondition, py::arg("boundary_condition_type"))
         .def("set_advection_diffusion_dirichlet_boundary_condition", &BoundaryConditionFactory::setAdvectionDiffusionDirichletBoundaryCondition, py::arg("boundary_condition_type"))
         .def("set_advection_diffusion_neumann_boundary_condition", &BoundaryConditionFactory::setAdvectionDiffusionNeumannBoundaryCondition, py::arg("boundary_condition_type"))
-        .def("set_advection_diffusion_directional_boundary_condition", &BoundaryConditionFactory::setAdvectionDiffusionDirectionalBoundaryCondition, py::arg("boundary_condition_type"));
+        .def("set_advection_diffusion_directional_boundary_condition", &BoundaryConditionFactory::setAdvectionDiffusionDirectionalBoundaryCondition, py::arg("boundary_condition_type"))
+        .def("set_freestream_boundary_condition", &BoundaryConditionFactory::setFreestreamBoundaryCondition, py::arg("boundary_condition_type"));
 
         py::enum_<BoundaryConditionFactory::VelocityBC>(parentModule, "VelocityBC")
         .value("VelocityBounceBack", BoundaryConditionFactory::VelocityBC::VelocityBounceBack)
@@ -137,6 +138,9 @@ namespace gpu_bindings::boundary_conditions
         .value("DirectionalOutflowNonReflecting", BoundaryConditionFactory::AdvectionDiffusionDirectionalBC::DirectionalOutflowNonReflecting)
         .value("NotSpecified", BoundaryConditionFactory::AdvectionDiffusionDirectionalBC::NotSpecified);
 
+        py::enum_<BoundaryConditionFactory::FreestreamBC>(parentModule, "FreestreamBC")
+        .value("FreestreamInterpolatedCompressible", BoundaryConditionFactory::FreestreamBC::FreestreamInterpolatedCompressible)
+        .value("NotSpecified", BoundaryConditionFactory::FreestreamBC::NotSpecified);
 
     }
 }

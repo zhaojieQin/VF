@@ -42,7 +42,9 @@
 
 #include <mpi.h>
 
+#include <cstdlib>
 #include <sstream>
+#include <string>
 
 #include <logger/Logger.h>
 
@@ -72,10 +74,17 @@ MPICommunicator::MPICommunicator()
     if (mpiInitialized == 0) {
         MPI_Init(NULL, NULL);
     }
-    MPI_Comm_rank(MPI_COMM_WORLD, &PID);
-    MPI_Comm_size(MPI_COMM_WORLD, &numprocs);
-    comm = MPI_COMM_WORLD;
+    // Opt-in: VF_MPI_USE_COMM_SELF=1 isolates this process on MPI_COMM_SELF, so that
+    // VirtualFluids can share MPI_COMM_WORLD with a coupled model (e.g. WRF on another rank)
+    // without joining its collectives. Default (unset) keeps MPI_COMM_WORLD.
+    const char* useCommSelf = std::getenv("VF_MPI_USE_COMM_SELF");
+    const bool isolated = (useCommSelf != nullptr && std::string(useCommSelf) == "1");
+    comm = isolated ? MPI_COMM_SELF : MPI_COMM_WORLD;
+    MPI_Comm_rank(comm, &PID);
+    MPI_Comm_size(comm, &numprocs);
     root = 0;
+    if (isolated)
+        VF_LOG_INFO("MPICommunicator: VF_MPI_USE_COMM_SELF=1, using MPI_COMM_SELF (numprocs = {})", numprocs);
 }
 //////////////////////////////////////////////////////////////////////////
 MPICommunicator::~MPICommunicator()
@@ -265,7 +274,7 @@ int MPICommunicator::mapCudaDevicesOnHosts(const std::vector<unsigned int> &devi
     gethostname(hostname, 254);
     hostname[254] = 0;
 
-    MPI_Gather(hostname, 255, MPI_BYTE, host, 255, MPI_BYTE, 0, MPI_COMM_WORLD);
+    MPI_Gather(hostname, 255, MPI_BYTE, host, 255, MPI_BYTE, 0, comm);
 
     int i, j;
     if (isRoot()) {
@@ -283,7 +292,7 @@ int MPICommunicator::mapCudaDevicesOnHosts(const std::vector<unsigned int> &devi
         }
     }
 
-    MPI_Scatter(map, 1, MPI_UNSIGNED, &device, 1, MPI_UNSIGNED, 0, MPI_COMM_WORLD);
+    MPI_Scatter(map, 1, MPI_UNSIGNED, &device, 1, MPI_UNSIGNED, 0, comm);
 
     VF_LOG_INFO("Rank: {} runs on host: {} with GPU: {}", getProcessID(), hostname, device);
 

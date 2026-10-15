@@ -155,6 +155,7 @@ public:
     uint getVelocitySize(int level) const override;
     void getVelocityValues(real* vx, real* vy, real* vz, int* indices, int level) const override;
     void getVelocityQs(real* qs[27], int level) const override;
+    void getFreestreamValues(int* k, int* kN, real* normalX, real* normalY, real* normalZ, int level) const override;
 
     uint getPressureSize(int level) const override;
     void getPressureValues(real* rho, int* indices, int* neighborIndices, int level) const override;

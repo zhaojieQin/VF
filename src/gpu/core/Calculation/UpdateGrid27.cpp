@@ -196,6 +196,10 @@ void UpdateGrid27::postCollisionBC(int level, uint t)
     this->bcKernelManager->runVelocityBCKernelPost(level);
 
     //////////////////////////////////////////////////////////////////////////
+    // F R E E S T R E A M (WRF-driven inflow/outflow)
+    this->bcKernelManager->runFreestreamBCKernelPost(level);
+
+    //////////////////////////////////////////////////////////////////////////
     // N O - S L I P
     this->bcKernelManager->runNoSlipBCKernelPost(level);
 

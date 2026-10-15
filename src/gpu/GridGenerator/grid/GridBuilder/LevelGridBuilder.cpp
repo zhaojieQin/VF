@@ -793,6 +793,35 @@ void LevelGridBuilder::getVelocityQs(real* qs[27], int level) const
     }
 }
 
+void LevelGridBuilder::getFreestreamValues(int* k, int* kN, real* normalX, real* normalY, real* normalZ, int level) const
+{
+    int allIndicesCounter = 0;
+    for (const auto& bc : boundaryConditions[level]->velocityBoundaryConditions)
+    {
+        auto normal = bc->side->getNormal();
+        const real delta = grids[level]->getDelta();
+        const int dir = bc->side->getDirection();
+        const int coord = bc->side->getCoordinate();
+
+        for (uint i = 0; i < (uint)bc->indices.size(); i++)
+        {
+            k[allIndicesCounter] = grids[level]->getSparseIndex(bc->indices[i]) + 1;
+            normalX[allIndicesCounter] = normal[0];
+            normalY[allIndicesCounter] = normal[1];
+            normalZ[allIndicesCounter] = normal[2];
+
+            real x, y, z;
+            grids[level]->transIndexToCoords(bc->indices[i], x, y, z);
+            if (coord == X_INDEX) x += -dir * delta;
+            if (coord == Y_INDEX) y += -dir * delta;
+            if (coord == Z_INDEX) z += -dir * delta;
+            kN[allIndicesCounter] = grids[level]->getSparseIndex(grids[level]->transCoordToIndex(x, y, z)) + 1;
+
+            allIndicesCounter++;
+        }
+    }
+}
+
 uint LevelGridBuilder::getPressureSize(int level) const
 {
     uint size = 0;

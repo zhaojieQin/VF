@@ -89,6 +89,10 @@ public:
     void cudaCopyOutflowBC(int lev);
     void cudaFreeOutflowBC(int lev);
 
+    void cudaAllocFreestreamBC(int lev);
+    void cudaCopyFreestreamBC(int lev);
+    void cudaFreeFreestreamBC(int lev);
+
     void cudaAllocNoSlipBC(int lev);
     void cudaCopyNoSlipBC(int lev);
     void cudaFreeNoSlipBC(int lev);

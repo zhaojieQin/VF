@@ -29,6 +29,7 @@
 //! \author Henry Korb
 //=======================================================================================
 #include <pybind11/pybind11.h>
+#include <pybind11/numpy.h>
 #include <gpu/core/Calculation/Simulation.h>
 #include <gpu/core/Kernel/KernelFactory/KernelFactory.h>
 #include <gpu/core/PreProcessor/PreProcessorFactory/PreProcessorFactory.h>
@@ -39,6 +40,8 @@
 #include "gpu/core/BoundaryConditions/BoundaryConditionFactory.h"
 #include "gpu/core/TurbulenceModels/TurbulenceModelFactory.h"
 #include "gpu/core/GridScaling/GridScalingFactory.h"
+#include <logger/Logger.h>
+#include <cmath>
 
 namespace gpu_bindings::simulation
 {
@@ -105,6 +108,70 @@ namespace gpu_bindings::simulation
         .def("calculate_timestep", &Simulation::calculateTimestep, py::arg("time_step"))
         .def("finalize", &Simulation::finalize)
         .def("addKineticEnergyAnalyzer", &Simulation::addKineticEnergyAnalyzer, py::arg("t_analyse"))
-        .def("addEnstrophyAnalyzer", &Simulation::addEnstrophyAnalyzer, py::arg("t_analyse"));
+        .def("addEnstrophyAnalyzer", &Simulation::addEnstrophyAnalyzer, py::arg("t_analyse"))
+        .def("get_velocity_bc_coordinates", [](Simulation& sim, int level) {
+            auto para = sim.getParameter();
+            uint n_bc = para->getParH(level)->velocityBC.numberOfBCnodes;
+
+            py::array_t<real> coords(std::vector<py::ssize_t>{static_cast<py::ssize_t>(n_bc), static_cast<py::ssize_t>(3)});
+            sim.getVelocityBCCoordinates(level, coords.mutable_data(), n_bc);
+            return coords;
+        }, py::arg("level") = 0, "Get physical coordinates (x,y,z) in meters of all velocity BC nodes")
+        .def("update_velocity_bc", [](Simulation& sim, py::array_t<real> u, py::array_t<real> v, py::array_t<real> w, int level) {
+            auto para = sim.getParameter();
+            uint n_bc = para->getParH(level)->velocityBC.numberOfBCnodes;
+
+            if (u.size() != n_bc || v.size() != n_bc || w.size() != n_bc) {
+                throw std::runtime_error("Velocity array size mismatch: expected " + std::to_string(n_bc) +
+                                       " but got u=" + std::to_string(u.size()) +
+                                       ", v=" + std::to_string(v.size()) +
+                                       ", w=" + std::to_string(w.size()));
+            }
+
+            sim.updateVelocityBC(level, u.data(), v.data(), w.data(), n_bc);
+        }, py::arg("u"), py::arg("v"), py::arg("w"), py::arg("level") = 0,
+           "Update velocity BC with physical velocities (m/s). Automatically converts to LBM units and copies to GPU.")
+        .def("get_surface_layer_bc_coordinates", [](Simulation& sim, int level) {
+            auto para = sim.getParameter();
+            uint n_bc = para->getParH(level)->surfaceLayerBC.numberOfBCnodes;
+
+            py::array_t<real> coords(std::vector<py::ssize_t>{static_cast<py::ssize_t>(n_bc), static_cast<py::ssize_t>(3)});
+            sim.getSurfaceLayerBCCoordinates(level, coords.mutable_data(), n_bc);
+            return coords;
+        }, py::arg("level") = 0, "Get physical coordinates (x,y,z) in meters of all surface layer BC nodes")
+        .def("update_surface_layer_heat_flux", [](Simulation& sim, py::array_t<real> hfx, int level) {
+            auto para = sim.getParameter();
+            uint n_bc = para->getParH(level)->surfaceLayerBC.numberOfBCnodes;
+
+            if ((uint)hfx.size() != n_bc) {
+                throw std::runtime_error("hfx array size mismatch: expected " + std::to_string(n_bc) +
+                                       " but got " + std::to_string(hfx.size()));
+            }
+
+            sim.updateSurfaceLayerHeatFlux(level, hfx.data(), n_bc);
+        }, py::arg("hfx"), py::arg("level") = 0,
+           "Update surface layer heat flux (W/m²) at each surface layer BC node and copy to GPU.")
+        .def("get_freestream_bc_coordinates", [](Simulation& sim, int level) {
+            auto para = sim.getParameter();
+            uint n_bc = para->getParH(level)->freestreamBC.numberOfBCnodes;
+
+            py::array_t<real> coords(std::vector<py::ssize_t>{static_cast<py::ssize_t>(n_bc), static_cast<py::ssize_t>(3)});
+            sim.getFreestreamBCCoordinates(level, coords.mutable_data(), n_bc);
+            return coords;
+        }, py::arg("level") = 0, "Get physical coordinates (x,y,z) in meters of all freestream BC nodes")
+        .def("update_freestream_bc", [](Simulation& sim, py::array_t<real> u, py::array_t<real> v, py::array_t<real> w, int level) {
+            auto para = sim.getParameter();
+            uint n_bc = para->getParH(level)->freestreamBC.numberOfBCnodes;
+
+            if (u.size() != n_bc || v.size() != n_bc || w.size() != n_bc) {
+                throw std::runtime_error("Freestream velocity array size mismatch: expected " + std::to_string(n_bc) +
+                                       " but got u=" + std::to_string(u.size()) +
+                                       ", v=" + std::to_string(v.size()) +
+                                       ", w=" + std::to_string(w.size()));
+            }
+
+            sim.updateFreestreamBC(level, u.data(), v.data(), w.data(), n_bc);
+        }, py::arg("u"), py::arg("v"), py::arg("w"), py::arg("level") = 0,
+           "Update freestream BC with physical velocities (m/s). Per-node inflow/outflow switching done on GPU.");
     }
 }

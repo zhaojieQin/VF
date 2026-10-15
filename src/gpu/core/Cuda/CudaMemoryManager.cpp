@@ -312,6 +312,67 @@ void CudaMemoryManager::cudaFreeOutflowBC(int lev)
     checkCudaErrors( cudaFreeHost(parameter->getParH(lev)->outflowBC.kN     ));
     checkCudaErrors( cudaFreeHost(parameter->getParH(lev)->outflowBC.RhoBC  ));
 }
+void CudaMemoryManager::cudaAllocFreestreamBC(int lev)
+{
+    unsigned int mem_size_k = sizeof(int)*parameter->getParH(lev)->freestreamBC.numberOfBCnodes;
+    unsigned int mem_size_q = sizeof(real)*parameter->getParH(lev)->freestreamBC.numberOfBCnodes;
+
+    //Host
+    checkCudaErrors( cudaMallocHost((void**) &(parameter->getParH(lev)->freestreamBC.q27[0]),  parameter->getD3Qxx()*mem_size_q ));
+    checkCudaErrors( cudaMallocHost((void**) &(parameter->getParH(lev)->freestreamBC.k),                             mem_size_k ));
+    checkCudaErrors( cudaMallocHost((void**) &(parameter->getParH(lev)->freestreamBC.kN),                            mem_size_k ));
+    checkCudaErrors( cudaMallocHost((void**) &(parameter->getParH(lev)->freestreamBC.Vx),                            mem_size_q ));
+    checkCudaErrors( cudaMallocHost((void**) &(parameter->getParH(lev)->freestreamBC.Vy),                            mem_size_q ));
+    checkCudaErrors( cudaMallocHost((void**) &(parameter->getParH(lev)->freestreamBC.Vz),                            mem_size_q ));
+    checkCudaErrors( cudaMallocHost((void**) &(parameter->getParH(lev)->freestreamBC.RhoBC),                         mem_size_q ));
+    checkCudaErrors( cudaMallocHost((void**) &(parameter->getParH(lev)->freestreamBC.normalX),                       mem_size_q ));
+    checkCudaErrors( cudaMallocHost((void**) &(parameter->getParH(lev)->freestreamBC.normalY),                       mem_size_q ));
+    checkCudaErrors( cudaMallocHost((void**) &(parameter->getParH(lev)->freestreamBC.normalZ),                       mem_size_q ));
+
+    //Device
+    checkCudaErrors( cudaMalloc((void**) &(parameter->getParD(lev)->freestreamBC.q27[0]),      parameter->getD3Qxx()*mem_size_q ));
+    checkCudaErrors( cudaMalloc((void**) &(parameter->getParD(lev)->freestreamBC.k),                                 mem_size_k ));
+    checkCudaErrors( cudaMalloc((void**) &(parameter->getParD(lev)->freestreamBC.kN),                                mem_size_k ));
+    checkCudaErrors( cudaMalloc((void**) &(parameter->getParD(lev)->freestreamBC.Vx),                                mem_size_q ));
+    checkCudaErrors( cudaMalloc((void**) &(parameter->getParD(lev)->freestreamBC.Vy),                                mem_size_q ));
+    checkCudaErrors( cudaMalloc((void**) &(parameter->getParD(lev)->freestreamBC.Vz),                                mem_size_q ));
+    checkCudaErrors( cudaMalloc((void**) &(parameter->getParD(lev)->freestreamBC.RhoBC),                             mem_size_q ));
+    checkCudaErrors( cudaMalloc((void**) &(parameter->getParD(lev)->freestreamBC.normalX),                           mem_size_q ));
+    checkCudaErrors( cudaMalloc((void**) &(parameter->getParD(lev)->freestreamBC.normalY),                           mem_size_q ));
+    checkCudaErrors( cudaMalloc((void**) &(parameter->getParD(lev)->freestreamBC.normalZ),                           mem_size_q ));
+
+    double tmp = 2.*(double)mem_size_k + 8.*(double)mem_size_q + (double)parameter->getD3Qxx()*(double)mem_size_q;
+    setMemsizeGPU(tmp, false);
+}
+void CudaMemoryManager::cudaCopyFreestreamBC(int lev)
+{
+    unsigned int mem_size_k = sizeof(int)*parameter->getParH(lev)->freestreamBC.numberOfBCnodes;
+    unsigned int mem_size_q = sizeof(real)*parameter->getParH(lev)->freestreamBC.numberOfBCnodes;
+
+    checkCudaErrors( cudaMemcpy(parameter->getParD(lev)->freestreamBC.q27[0],  parameter->getParH(lev)->freestreamBC.q27[0], parameter->getD3Qxx()*mem_size_q, cudaMemcpyHostToDevice));
+    checkCudaErrors( cudaMemcpy(parameter->getParD(lev)->freestreamBC.k,       parameter->getParH(lev)->freestreamBC.k,                            mem_size_k,  cudaMemcpyHostToDevice));
+    checkCudaErrors( cudaMemcpy(parameter->getParD(lev)->freestreamBC.kN,      parameter->getParH(lev)->freestreamBC.kN,                           mem_size_k,  cudaMemcpyHostToDevice));
+    checkCudaErrors( cudaMemcpy(parameter->getParD(lev)->freestreamBC.Vx,      parameter->getParH(lev)->freestreamBC.Vx,                           mem_size_q,  cudaMemcpyHostToDevice));
+    checkCudaErrors( cudaMemcpy(parameter->getParD(lev)->freestreamBC.Vy,      parameter->getParH(lev)->freestreamBC.Vy,                           mem_size_q,  cudaMemcpyHostToDevice));
+    checkCudaErrors( cudaMemcpy(parameter->getParD(lev)->freestreamBC.Vz,      parameter->getParH(lev)->freestreamBC.Vz,                           mem_size_q,  cudaMemcpyHostToDevice));
+    checkCudaErrors( cudaMemcpy(parameter->getParD(lev)->freestreamBC.RhoBC,   parameter->getParH(lev)->freestreamBC.RhoBC,                        mem_size_q,  cudaMemcpyHostToDevice));
+    checkCudaErrors( cudaMemcpy(parameter->getParD(lev)->freestreamBC.normalX, parameter->getParH(lev)->freestreamBC.normalX,                      mem_size_q,  cudaMemcpyHostToDevice));
+    checkCudaErrors( cudaMemcpy(parameter->getParD(lev)->freestreamBC.normalY, parameter->getParH(lev)->freestreamBC.normalY,                      mem_size_q,  cudaMemcpyHostToDevice));
+    checkCudaErrors( cudaMemcpy(parameter->getParD(lev)->freestreamBC.normalZ, parameter->getParH(lev)->freestreamBC.normalZ,                      mem_size_q,  cudaMemcpyHostToDevice));
+}
+void CudaMemoryManager::cudaFreeFreestreamBC(int lev)
+{
+    checkCudaErrors( cudaFreeHost(parameter->getParH(lev)->freestreamBC.q27[0]  ));
+    checkCudaErrors( cudaFreeHost(parameter->getParH(lev)->freestreamBC.k       ));
+    checkCudaErrors( cudaFreeHost(parameter->getParH(lev)->freestreamBC.kN      ));
+    checkCudaErrors( cudaFreeHost(parameter->getParH(lev)->freestreamBC.Vx      ));
+    checkCudaErrors( cudaFreeHost(parameter->getParH(lev)->freestreamBC.Vy      ));
+    checkCudaErrors( cudaFreeHost(parameter->getParH(lev)->freestreamBC.Vz      ));
+    checkCudaErrors( cudaFreeHost(parameter->getParH(lev)->freestreamBC.RhoBC   ));
+    checkCudaErrors( cudaFreeHost(parameter->getParH(lev)->freestreamBC.normalX ));
+    checkCudaErrors( cudaFreeHost(parameter->getParH(lev)->freestreamBC.normalY ));
+    checkCudaErrors( cudaFreeHost(parameter->getParH(lev)->freestreamBC.normalZ ));
+}
 //No-Slip
 void CudaMemoryManager::cudaAllocNoSlipBC(int lev)
 {

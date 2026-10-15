@@ -662,6 +662,25 @@ void Simulation::readAndWriteFiles(uint timestep)
             getLastCudaError("calculateMacroscopicQuantities execution failed");
 
         cudaMemoryManager->cudaCopyPrint(lev);
+
+        // Fix BC node velocities for VTK output:
+        // calculateMacroscopicQuantitiesCompressible computed wrong velocities for BC nodes
+        // (from stopper neighbors). Overwrite with correct velocityBC values.
+        const auto& bcH = para->getParH(lev)->velocityBC;
+        if (bcH.numberOfBCnodes > 0) {
+            real* vxH = para->getParH(lev)->velocityX;
+            real* vyH = para->getParH(lev)->velocityY;
+            real* vzH = para->getParH(lev)->velocityZ;
+            for (uint i = 0; i < bcH.numberOfBCnodes; i++) {
+                const int nodeIdx = bcH.k[i];
+                if (nodeIdx > 0) {
+                    vxH[nodeIdx] = bcH.Vx[i];
+                    vyH[nodeIdx] = bcH.Vy[i];
+                    vzH[nodeIdx] = bcH.Vz[i];
+                }
+            }
+        }
+
         if (para->getCalcMean()) {
             cudaMemoryManager->cudaCopyMeanPrint(lev);
         }
@@ -849,6 +868,135 @@ Simulation::~Simulation()
         para->getStreamManager()->destroyCudaEvents();
         para->getStreamManager()->terminateStreams();
     }
+}
+
+//////////////////////////////////////////////////////////////////////////
+void Simulation::getVelocityBCCoordinates(int level, real* coords_out, uint n_bc) const
+{
+    if (!para) {
+        throw std::runtime_error("Simulation::getVelocityBCCoordinates: Parameter object is null");
+    }
+
+    uint n_bc_actual = para->getParH(level)->velocityBC.numberOfBCnodes;
+    if (n_bc != n_bc_actual) {
+        throw std::runtime_error("Simulation::getVelocityBCCoordinates: Size mismatch. Expected " +
+                               std::to_string(n_bc_actual) + " but got " + std::to_string(n_bc));
+    }
+
+    for (uint i = 0; i < n_bc; i++) {
+        int node_idx = para->getParH(level)->velocityBC.k[i];
+        coords_out[i * 3 + 0] = para->getParH(level)->coordinateX[node_idx];
+        coords_out[i * 3 + 1] = para->getParH(level)->coordinateY[node_idx];
+        coords_out[i * 3 + 2] = para->getParH(level)->coordinateZ[node_idx];
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////
+void Simulation::updateVelocityBC(int level, const real* u, const real* v, const real* w, uint n_bc)
+{
+    if (!para || !cudaMemoryManager) {
+        throw std::runtime_error("Simulation::updateVelocityBC: Parameter or CudaMemoryManager is null");
+    }
+
+    uint n_bc_actual = para->getParH(level)->velocityBC.numberOfBCnodes;
+    if (n_bc != n_bc_actual) {
+        throw std::runtime_error("Simulation::updateVelocityBC: Size mismatch. Expected " +
+                               std::to_string(n_bc_actual) + " but got " + std::to_string(n_bc));
+    }
+
+    real velocityRatio = para->getVelocityRatio();
+
+    for (uint i = 0; i < n_bc; i++) {
+        para->getParH(level)->velocityBC.Vx[i] = u[i] / velocityRatio;
+        para->getParH(level)->velocityBC.Vy[i] = v[i] / velocityRatio;
+        para->getParH(level)->velocityBC.Vz[i] = w[i] / velocityRatio;
+    }
+
+    cudaMemoryManager->cudaCopyVeloBC(level);
+}
+
+//////////////////////////////////////////////////////////////////////////
+void Simulation::getSurfaceLayerBCCoordinates(int level, real* coords_out, uint n_bc) const
+{
+    if (!para) {
+        throw std::runtime_error("Simulation::getSurfaceLayerBCCoordinates: Parameter object is null");
+    }
+
+    uint n_bc_actual = para->getParH(level)->surfaceLayerBC.numberOfBCnodes;
+    if (n_bc != n_bc_actual) {
+        throw std::runtime_error("Simulation::getSurfaceLayerBCCoordinates: Size mismatch. Expected " +
+                               std::to_string(n_bc_actual) + " but got " + std::to_string(n_bc));
+    }
+
+    for (uint i = 0; i < n_bc; i++) {
+        int node_idx = para->getParH(level)->surfaceLayerBC.k[i];
+        coords_out[i * 3 + 0] = para->getParH(level)->coordinateX[node_idx];
+        coords_out[i * 3 + 1] = para->getParH(level)->coordinateY[node_idx];
+        coords_out[i * 3 + 2] = para->getParH(level)->coordinateZ[node_idx];
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////
+void Simulation::updateSurfaceLayerHeatFlux(int level, const real* hfx, uint n_bc)
+{
+    if (!para || !cudaMemoryManager) {
+        throw std::runtime_error("Simulation::updateSurfaceLayerHeatFlux: Parameter or CudaMemoryManager is null");
+    }
+
+    uint n_bc_actual = para->getParH(level)->surfaceLayerBC.numberOfBCnodes;
+    if (n_bc != n_bc_actual) {
+        throw std::runtime_error("Simulation::updateSurfaceLayerHeatFlux: Size mismatch. Expected " +
+                               std::to_string(n_bc_actual) + " but got " + std::to_string(n_bc));
+    }
+
+    for (uint i = 0; i < n_bc; i++) {
+        para->getParH(level)->surfaceLayerWallModel.temperatureParameters.surfaceHeatFlux[i] = hfx[i];
+    }
+
+    cudaMemoryManager->cudaCopyTemperatureWallModel(
+        para->getParH(level)->surfaceLayerWallModel.temperatureParameters,
+        para->getParD(level)->surfaceLayerWallModel.temperatureParameters,
+        para->getParH(level)->surfaceLayerBC.numberOfBCnodes);
+}
+
+//////////////////////////////////////////////////////////////////////////
+void Simulation::getFreestreamBCCoordinates(int level, real* coords_out, uint n_bc) const
+{
+    if (!para)
+        throw std::runtime_error("Simulation::getFreestreamBCCoordinates: Parameter object is null");
+
+    uint n_bc_actual = para->getParH(level)->freestreamBC.numberOfBCnodes;
+    if (n_bc != n_bc_actual)
+        throw std::runtime_error("Simulation::getFreestreamBCCoordinates: Size mismatch. Expected " +
+                               std::to_string(n_bc_actual) + " but got " + std::to_string(n_bc));
+
+    for (uint i = 0; i < n_bc; i++) {
+        int node_idx = para->getParH(level)->freestreamBC.k[i];
+        coords_out[i * 3 + 0] = para->getParH(level)->coordinateX[node_idx];
+        coords_out[i * 3 + 1] = para->getParH(level)->coordinateY[node_idx];
+        coords_out[i * 3 + 2] = para->getParH(level)->coordinateZ[node_idx];
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////
+void Simulation::updateFreestreamBC(int level, const real* u, const real* v, const real* w, uint n_bc)
+{
+    if (!para || !cudaMemoryManager)
+        throw std::runtime_error("Simulation::updateFreestreamBC: Parameter or CudaMemoryManager is null");
+
+    uint n_bc_actual = para->getParH(level)->freestreamBC.numberOfBCnodes;
+    if (n_bc != n_bc_actual)
+        throw std::runtime_error("Simulation::updateFreestreamBC: Size mismatch. Expected " +
+                               std::to_string(n_bc_actual) + " but got " + std::to_string(n_bc));
+
+    real velocityRatio = para->getVelocityRatio();
+    for (uint i = 0; i < n_bc; i++) {
+        para->getParH(level)->freestreamBC.Vx[i] = u[i] / velocityRatio;
+        para->getParH(level)->freestreamBC.Vy[i] = v[i] / velocityRatio;
+        para->getParH(level)->freestreamBC.Vz[i] = w[i] / velocityRatio;
+    }
+
+    cudaMemoryManager->cudaCopyFreestreamBC(level);
 }
 
 }
