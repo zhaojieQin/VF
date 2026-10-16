@@ -479,6 +479,9 @@ void GridGenerator::allocArrays_BoundaryValues(const BoundaryConditionFactory* b
             cudaMemoryManager->cudaAllocFreestreamBC(level);
 
             auto& bc = para->getParH(level)->freestreamBC;
+            // cudaAllocFreestreamBC only allocates q27[0]; point q27[1..26] into that block
+            // before getVelocityQs writes qs[dir][i] (same as velocityBC setup below).
+            initPointersToSubgridDistances(bc);
             builder->getFreestreamValues(bc.k, bc.kN, bc.normalX, bc.normalY, bc.normalZ, level);
             builder->getVelocityQs(bc.q27, (int)level);
 
