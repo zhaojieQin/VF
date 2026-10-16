@@ -75,6 +75,23 @@ BoundaryConditionKernelManager::BoundaryConditionKernelManager(SPtr<Parameter> p
     else
         this->pressureBoundaryConditionPre = std::get<BoundaryConditionKernel>(bcFactory->getPressureBoundaryConditionPre());
 
+    // The freestream BC reuses the velocity-BC nodes (see GridGenerator). Exactly one kernel may
+    // own them; the other one gets zero nodes so that it is neither checked nor run.
+    const bool useFreestream = static_cast<bool>(this->freestreamBoundaryConditionPost);
+    const bool useVelocity = static_cast<bool>(this->velocityBoundaryConditionPost);
+    if (useFreestream && useVelocity)
+        throw std::runtime_error("Velocity and freestream boundary conditions share the same nodes; "
+                                 "set only one of them in the BoundaryConditionFactory.");
+    for (int level = this->para->getCoarse(); level <= this->para->getFine(); level++) {
+        if (useFreestream) {
+            this->para->getParH(level)->velocityBC.numberOfBCnodes = 0;
+            this->para->getParD(level)->velocityBC.numberOfBCnodes = 0;
+        } else {
+            this->para->getParH(level)->freestreamBC.numberOfBCnodes = 0;
+            this->para->getParD(level)->freestreamBC.numberOfBCnodes = 0;
+        }
+    }
+
     checkBoundaryCondition(this->velocityBoundaryConditionPost, this->para->getParD(0)->velocityBC,
                            "velocityBoundaryConditionPost");
     checkBoundaryCondition(this->noSlipBoundaryConditionPost, this->para->getParD(0)->noSlipBC,
