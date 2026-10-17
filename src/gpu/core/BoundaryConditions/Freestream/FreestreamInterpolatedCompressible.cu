@@ -74,8 +74,11 @@ __global__ void FreestreamInterpolatedCompressible_Device(
     const real nz = normalZ[nodeIndex];
 
     // u_n > 0: flow leaving domain (outward normal · velocity > 0) → OutflowNonReflecting
+    // A zero normal marks roof and edge/corner nodes (set in GridGenerator): these always
+    // use the velocity-BC branch below.
+    const bool outflowAllowed = (nx != c0o1 || ny != c0o1 || nz != c0o1);
     const real u_n = VeloX * nx + VeloY * ny + VeloZ * nz;
-    if (u_n >= c0o1) {
+    if (outflowAllowed && u_n >= c0o1) {
         const ListIndices listIdx((uint)subgridDistanceIndices[nodeIndex], neighborX, neighborY, neighborZ);
         const ListIndices neighborIdx((uint)neighborIndices[nodeIndex], neighborX, neighborY, neighborZ);
 

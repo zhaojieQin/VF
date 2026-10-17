@@ -34,6 +34,7 @@
 #include "GridGenerator.h"
 
 #include <algorithm>
+#include <cmath>
 
 #include <GridGenerator/TransientBCSetter/TransientBCSetter.h>
 #include <GridGenerator/grid/Grid.h>
@@ -484,6 +485,43 @@ void GridGenerator::allocArrays_BoundaryValues(const BoundaryConditionFactory* b
             initPointersToSubgridDistances(bc);
             builder->getFreestreamValues(bc.k, bc.kN, bc.normalX, bc.normalY, bc.normalZ, level);
             builder->getVelocityQs(bc.q27, (int)level);
+
+            // Roof nodes and edge/corner nodes (on >= 2 bounding planes) must always use the
+            // velocity-BC branch of the freestream kernel: the roof's inflow/outflow decision
+            // would hinge on the sign of a tiny w, and the outflow branch only rebuilds the
+            // populations of a single face. Mark them with a zero normal (normals are read
+            // only by the freestream kernel).
+            {
+                const real* cx = para->getParH(level)->coordinateX;
+                const real* cy = para->getParH(level)->coordinateY;
+                const real* cz = para->getParH(level)->coordinateZ;
+                const real delta = cx[2] - cx[1];
+                const real tol = c1o2 * delta;
+                real xmin = cx[bc.k[0]], xmax = xmin, ymin = cy[bc.k[0]], ymax = ymin, zmin = cz[bc.k[0]], zmax = zmin;
+                for (uint i = 1; i < n; i++) {
+                    const int kk = bc.k[i];
+                    xmin = std::min(xmin, cx[kk]); xmax = std::max(xmax, cx[kk]);
+                    ymin = std::min(ymin, cy[kk]); ymax = std::max(ymax, cy[kk]);
+                    zmin = std::min(zmin, cz[kk]); zmax = std::max(zmax, cz[kk]);
+                }
+                uint nRoof = 0, nEdge = 0;
+                for (uint i = 0; i < n; i++) {
+                    const int kk = bc.k[i];
+                    const bool onRoof = std::abs(cz[kk] - zmax) < tol;
+                    const int nPlanes = (std::abs(cx[kk] - xmin) < tol) + (std::abs(cx[kk] - xmax) < tol) +
+                                        (std::abs(cy[kk] - ymin) < tol) + (std::abs(cy[kk] - ymax) < tol) +
+                                        (std::abs(cz[kk] - zmin) < tol) + (onRoof ? 1 : 0);
+                    if (onRoof || nPlanes >= 2) {
+                        if (nPlanes >= 2) nEdge++; else nRoof++;
+                        bc.normalX[i] = c0o1;
+                        bc.normalY[i] = c0o1;
+                        bc.normalZ[i] = c0o1;
+                    }
+                }
+                VF_LOG_INFO("freestreamBC level {}: {} lateral-face nodes (inflow/outflow switch), "
+                            "{} roof nodes + {} edge/corner nodes forced to velocity BC",
+                            level, n - nRoof - nEdge, nRoof, nEdge);
+            }
 
             // Vx/Vy/Vz initialised to zero; RhoBC = 0 already (zero-initialised by cudaAlloc)
             for (uint i = 0; i < n; i++) {
