@@ -120,7 +120,7 @@ void AdvectionDiffusionDirichletInterpolatedSlip(LBMSimulationParameter* paramet
 {
     const vf::cuda::CudaGrid grid(parameterDevice->numberofthreads, bcParameters.numberOfBCnodes);
 
-    AdvectionDiffusionDirichlet_Device<BoundaryConditionFactory::AdvectionDiffusionDirichletBC::DirichletAntiBounceBackSlip>
+    AdvectionDiffusionDirichlet_Device<BoundaryConditionFactory::AdvectionDiffusionDirichletBC::DirichletInterpolatedSlip>
         <<<grid.grid, grid.threads>>>(parameterDevice->distributionsAD.f[0], bcParameters, parameterDevice->neighborX,
                                       parameterDevice->neighborY, parameterDevice->neighborZ, parameterDevice->velocityX,
                                       parameterDevice->velocityY, parameterDevice->velocityZ, parameterDevice->numberOfNodes,
@@ -147,7 +147,7 @@ void AdvectionDiffusionDirichletInterpolatedNoSlip(LBMSimulationParameter* param
     const vf::cuda::CudaGrid grid(parameterDevice->numberofthreads, bcParameters.numberOfBCnodes);
 
     AdvectionDiffusionDirichlet_Device<
-        BoundaryConditionFactory::AdvectionDiffusionDirichletBC::DirichletAntiBounceBackNoSlip><<<grid.grid, grid.threads>>>(
+        BoundaryConditionFactory::AdvectionDiffusionDirichletBC::DirichletInterpolatedNoSlip><<<grid.grid, grid.threads>>>(
         parameterDevice->distributionsAD.f[0], bcParameters, parameterDevice->neighborX, parameterDevice->neighborY,
         parameterDevice->neighborZ, parameterDevice->velocityX, parameterDevice->velocityY, parameterDevice->velocityZ,
         parameterDevice->numberOfNodes, parameterDevice->omegaDiffusivity, parameterDevice->isEvenTimestep);
