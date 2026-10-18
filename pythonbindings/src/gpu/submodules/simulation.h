@@ -150,7 +150,9 @@ namespace gpu_bindings::simulation
 
             sim.updateSurfaceLayerHeatFlux(level, hfx.data(), n_bc);
         }, py::arg("hfx"), py::arg("level") = 0,
-           "Update surface layer heat flux (W/m²) at each surface layer BC node and copy to GPU.")
+           "Update surface layer heat flux at each surface layer BC node and copy to GPU. "
+           "Values are stored as-is: pass the kinematic heat flux in lattice units, "
+           "i.e. H[W/m^2] / (rho*cp) * dt/dx (same normalisation as set_surface_layer_boundary_condition).")
         .def("get_freestream_bc_coordinates", [](Simulation& sim, int level) {
             auto para = sim.getParameter();
             uint n_bc = para->getParH(level)->freestreamBC.numberOfBCnodes;
@@ -172,6 +174,26 @@ namespace gpu_bindings::simulation
 
             sim.updateFreestreamBC(level, u.data(), v.data(), w.data(), n_bc);
         }, py::arg("u"), py::arg("v"), py::arg("w"), py::arg("level") = 0,
-           "Update freestream BC with physical velocities (m/s). Per-node inflow/outflow switching done on GPU.");
+           "Update freestream BC with physical velocities (m/s). Per-node inflow/outflow switching done on GPU.")
+        .def("get_ad_dirichlet_bc_coordinates", [](Simulation& sim, int level) {
+            auto para = sim.getParameter();
+            uint n_bc = para->getParH(level)->AdvectionDiffusionDirichletBC.numberOfBCnodes;
+
+            py::array_t<real> coords(std::vector<py::ssize_t>{static_cast<py::ssize_t>(n_bc), static_cast<py::ssize_t>(3)});
+            sim.getADDirichletBCCoordinates(level, coords.mutable_data(), n_bc);
+            return coords;
+        }, py::arg("level") = 0, "Get physical coordinates (x,y,z) in meters of all advection-diffusion Dirichlet BC nodes")
+        .def("update_ad_dirichlet_bc", [](Simulation& sim, py::array_t<real> concentration, int level) {
+            auto para = sim.getParameter();
+            uint n_bc = para->getParH(level)->AdvectionDiffusionDirichletBC.numberOfBCnodes;
+
+            if ((uint)concentration.size() != n_bc) {
+                throw std::runtime_error("AD Dirichlet concentration array size mismatch: expected " + std::to_string(n_bc) +
+                                       " but got " + std::to_string(concentration.size()));
+            }
+
+            sim.updateADDirichletBC(level, concentration.data(), n_bc);
+        }, py::arg("concentration"), py::arg("level") = 0,
+           "Update advection-diffusion Dirichlet values (temperature deviation T - T_ref in K) and copy to GPU.");
     }
 }

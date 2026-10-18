@@ -118,6 +118,8 @@ public:
     // Freestream BC interface for Python bindings (WRF-driven open boundaries)
     void getFreestreamBCCoordinates(int level, real* coords_out, uint n_bc) const;
     void updateFreestreamBC(int level, const real* u, const real* v, const real* w, uint n_bc);
+    void getADDirichletBCCoordinates(int level, real* coords_out, uint n_bc) const;
+    void updateADDirichletBC(int level, const real* concentration, uint n_bc);
 
 private:
     void init(GridProvider &gridProvider, const BoundaryConditionFactory *bcFactory, SPtr<TurbulenceModelFactory> tmFactory, GridScalingFactory *scalingFactory);

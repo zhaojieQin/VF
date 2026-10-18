@@ -960,6 +960,43 @@ void Simulation::updateSurfaceLayerHeatFlux(int level, const real* hfx, uint n_b
 }
 
 //////////////////////////////////////////////////////////////////////////
+void Simulation::getADDirichletBCCoordinates(int level, real* coords_out, uint n_bc) const
+{
+    if (!para)
+        throw std::runtime_error("Simulation::getADDirichletBCCoordinates: Parameter object is null");
+
+    const auto& bc = para->getParH(level)->AdvectionDiffusionDirichletBC;
+    if (n_bc != (uint)bc.numberOfBCnodes)
+        throw std::runtime_error("Simulation::getADDirichletBCCoordinates: Size mismatch. Expected " +
+                                 std::to_string(bc.numberOfBCnodes) + " but got " + std::to_string(n_bc));
+
+    for (uint i = 0; i < n_bc; i++) {
+        const int node_idx = bc.BCNodeIndices[i];
+        coords_out[i * 3 + 0] = para->getParH(level)->coordinateX[node_idx];
+        coords_out[i * 3 + 1] = para->getParH(level)->coordinateY[node_idx];
+        coords_out[i * 3 + 2] = para->getParH(level)->coordinateZ[node_idx];
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////
+void Simulation::updateADDirichletBC(int level, const real* concentration, uint n_bc)
+{
+    if (!para || !cudaMemoryManager)
+        throw std::runtime_error("Simulation::updateADDirichletBC: Parameter or CudaMemoryManager is null");
+
+    auto& bc = para->getParH(level)->AdvectionDiffusionDirichletBC;
+    if (n_bc != (uint)bc.numberOfBCnodes)
+        throw std::runtime_error("Simulation::updateADDirichletBC: Size mismatch. Expected " +
+                                 std::to_string(bc.numberOfBCnodes) + " but got " + std::to_string(n_bc));
+
+    // concentration is the temperature deviation from the reference temperature (K), no unit scaling
+    for (uint i = 0; i < n_bc; i++)
+        bc.concentration[i] = concentration[i];
+
+    cudaMemoryManager->cudaCopyConcentrationDirichletBCHostToDevice(level);
+}
+
+//////////////////////////////////////////////////////////////////////////
 void Simulation::getFreestreamBCCoordinates(int level, real* coords_out, uint n_bc) const
 {
     if (!para)
