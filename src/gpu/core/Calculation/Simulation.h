@@ -67,6 +67,7 @@ class TrafficMovementFactory;
 class UpdateGrid27;
 class KineticEnergyAnalyzer;
 class EnstrophyAnalyzer;
+class CellPerturbation;
 class BoundaryConditionFactory;
 class GridScalingFactory;
 class TurbulenceModelFactory;
@@ -121,6 +122,14 @@ public:
     void getADDirichletBCCoordinates(int level, real* coords_out, uint n_bc) const;
     void updateADDirichletBC(int level, const real* concentration, uint n_bc);
 
+    // Cell perturbation method (CPM) for inflow turbulence, see CellPerturbation.h.
+    // Set up once; returns the number of perturbed fluid nodes. Replaces any previous setup.
+    uint setCellPerturbationCells(int level, real x0, real y0, real z0, real cellDx, real cellDy, real dz,
+                                  const int* cellTable, uint nxc, uint nyc, uint nzc, uint numberOfCells);
+    //! per-cell values (thetaPrime in K, uPrime/vPrime in lattice units); nullptr skips that part
+    void applyCellPerturbation(const real* thetaPrime, const real* uPrime, const real* vPrime);
+    uint getNumberOfPerturbationCells() const;
+
 private:
     void init(GridProvider &gridProvider, const BoundaryConditionFactory *bcFactory, SPtr<TurbulenceModelFactory> tmFactory, GridScalingFactory *scalingFactory);
     void allocNeighborsOffsetsScalesAndBoundaries(GridProvider& gridProvider, const BoundaryConditionFactory* bcFactory);
@@ -154,6 +163,7 @@ private:
     std::unique_ptr<KineticEnergyAnalyzer> kineticEnergyAnalyzer;
     std::unique_ptr<EnstrophyAnalyzer> enstrophyAnalyzer;
     std::unique_ptr<UpdateGrid27> updateGrid27;
+    std::unique_ptr<CellPerturbation> cellPerturbation;
 
     vf::basics::MetaData metaData;
 };

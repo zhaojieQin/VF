@@ -194,6 +194,43 @@ namespace gpu_bindings::simulation
 
             sim.updateADDirichletBC(level, concentration.data(), n_bc);
         }, py::arg("concentration"), py::arg("level") = 0,
-           "Update advection-diffusion Dirichlet values (temperature deviation T - T_ref in K) and copy to GPU.");
+           "Update advection-diffusion Dirichlet values (temperature deviation T - T_ref in K) and copy to GPU.")
+        .def("set_cell_perturbation_cells", [](Simulation& sim, py::array_t<int, py::array::c_style | py::array::forcecast> cell_table,
+                                               real x0, real y0, real z0, real cell_dx, real cell_dy, real dz,
+                                               uint number_of_cells, int level) {
+            if (cell_table.ndim() != 3)
+                throw std::runtime_error("cell_table must be a 3-D int array indexed [iz, iy, ix]");
+            const uint nzc = static_cast<uint>(cell_table.shape(0));
+            const uint nyc = static_cast<uint>(cell_table.shape(1));
+            const uint nxc = static_cast<uint>(cell_table.shape(2));
+            return sim.setCellPerturbationCells(level, x0, y0, z0, cell_dx, cell_dy, dz, cell_table.data(), nxc, nyc,
+                                                nzc, number_of_cells);
+        }, py::arg("cell_table"), py::arg("x0"), py::arg("y0"), py::arg("z0"), py::arg("cell_dx"), py::arg("cell_dy"),
+           py::arg("dz"), py::arg("number_of_cells"), py::arg("level") = 0,
+           "Cell perturbation method: group fluid nodes into cells once. cell_table[iz, iy, ix] = cell id (-1: none), "
+           "ix = floor((x-x0)/cell_dx), iy = floor((y-y0)/cell_dy), iz = round((z-z0)/dz), coordinates in m. "
+           "Returns the number of perturbed fluid nodes.")
+        .def("apply_cell_perturbation", [](Simulation& sim, py::object theta_prime, py::object u_prime, py::object v_prime) {
+            const uint n = sim.getNumberOfPerturbationCells();
+            auto as_array = [n](const py::object& obj, const char* name) -> py::array_t<real, py::array::c_style | py::array::forcecast> {
+                if (obj.is_none())
+                    return py::array_t<real, py::array::c_style | py::array::forcecast>();
+                auto arr = py::array_t<real, py::array::c_style | py::array::forcecast>::ensure(obj);
+                if (!arr || (uint)arr.size() != n)
+                    throw std::runtime_error(std::string("apply_cell_perturbation: ") + name + " must have " +
+                                             std::to_string(n) + " values (one per cell)");
+                return arr;
+            };
+            auto theta = as_array(theta_prime, "theta_prime");
+            auto u = as_array(u_prime, "u_prime");
+            auto v = as_array(v_prime, "v_prime");
+            if (u_prime.is_none() != v_prime.is_none())
+                throw std::runtime_error("apply_cell_perturbation: give both u_prime and v_prime, or neither");
+            sim.applyCellPerturbation(theta_prime.is_none() ? nullptr : theta.data(),
+                                      u_prime.is_none() ? nullptr : u.data(),
+                                      v_prime.is_none() ? nullptr : v.data());
+        }, py::arg("theta_prime"), py::arg("u_prime") = py::none(), py::arg("v_prime") = py::none(),
+           "Cell perturbation method: seed one perturbation per cell into the pre-collision distributions, "
+           "theta_prime in K (AD concentration units), u_prime/v_prime in lattice units (dx/dt). None skips that part.");
     }
 }

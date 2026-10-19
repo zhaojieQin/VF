@@ -51,6 +51,7 @@
 #include <parallel/MPICommunicator.h>
 #include <parallel/NullCommunicator.h>
 
+#include "BoundaryConditions/AdvectionDiffusion/CellPerturbation.h"
 #include "Calculation/Calculation.h"
 #include "Calculation/UpdateGrid27.h"
 #include "Communication/ExchangeData27.h"
@@ -994,6 +995,31 @@ void Simulation::updateADDirichletBC(int level, const real* concentration, uint 
         bc.concentration[i] = concentration[i];
 
     cudaMemoryManager->cudaCopyConcentrationDirichletBCHostToDevice(level);
+}
+
+//////////////////////////////////////////////////////////////////////////
+uint Simulation::setCellPerturbationCells(int level, real x0, real y0, real z0, real cellDx, real cellDy, real dz,
+                                          const int* cellTable, uint nxc, uint nyc, uint nzc, uint numberOfCells)
+{
+    if (!para)
+        throw std::runtime_error("Simulation::setCellPerturbationCells: Parameter object is null");
+    cellPerturbation = std::make_unique<CellPerturbation>(para.get(), level, x0, y0, z0, cellDx, cellDy, dz, cellTable,
+                                                          nxc, nyc, nzc, numberOfCells);
+    return cellPerturbation->getNumberOfNodes();
+}
+
+//////////////////////////////////////////////////////////////////////////
+void Simulation::applyCellPerturbation(const real* thetaPrime, const real* uPrime, const real* vPrime)
+{
+    if (!cellPerturbation)
+        throw std::runtime_error("Simulation::applyCellPerturbation: call setCellPerturbationCells first");
+    cellPerturbation->apply(para.get(), thetaPrime, uPrime, vPrime);
+}
+
+//////////////////////////////////////////////////////////////////////////
+uint Simulation::getNumberOfPerturbationCells() const
+{
+    return cellPerturbation ? cellPerturbation->getNumberOfCells() : 0;
 }
 
 //////////////////////////////////////////////////////////////////////////
