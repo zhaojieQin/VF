@@ -231,6 +231,44 @@ namespace gpu_bindings::simulation
                                       v_prime.is_none() ? nullptr : v.data());
         }, py::arg("theta_prime"), py::arg("u_prime") = py::none(), py::arg("v_prime") = py::none(),
            "Cell perturbation method: seed one perturbation per cell into the pre-collision distributions, "
-           "theta_prime in K (AD concentration units), u_prime/v_prime in lattice units (dx/dt). None skips that part.");
+           "theta_prime in K (AD concentration units), u_prime/v_prime in lattice units (dx/dt). None skips that part.")
+        .def("set_relaxation_zone", [](Simulation& sim, real x_min, real x_max, real y_min, real y_max, real z_max,
+                                       real width, real top_width, uint faces, int level) {
+            return sim.setRelaxationZone(level, x_min, x_max, y_min, y_max, z_max, width, top_width, faces);
+        }, py::arg("x_min"), py::arg("x_max"), py::arg("y_min"), py::arg("y_max"), py::arg("z_max"), py::arg("width"),
+           py::arg("top_width") = 0, py::arg("faces") = 15u, py::arg("level") = 0,
+           "Lateral relaxation zone: every fluid node within `width` (m) of a selected face is nudged towards a target "
+           "state with weight cos^2(pi d / (2 width)). faces bit mask: 1=MX, 2=PX, 4=MY, 8=PY, 16=PZ (uses top_width). "
+           "Returns the number of relaxed fluid nodes.")
+        .def("get_relaxation_zone_nodes", [](Simulation& sim) {
+            const uint n = sim.getNumberOfRelaxationZoneNodes();
+            py::array_t<real> coords(std::vector<py::ssize_t>{static_cast<py::ssize_t>(n), static_cast<py::ssize_t>(3)});
+            py::array_t<real> weights(static_cast<py::ssize_t>(n));
+            sim.getRelaxationZoneNodes(coords.mutable_data(), weights.mutable_data());
+            return py::make_tuple(coords, weights);
+        }, "Relaxation-zone nodes: (coords (n, 3) in m, ramp weights (n,)), in the order expected by push_relaxation_targets.")
+        .def("push_relaxation_targets", [](Simulation& sim, py::object vx, py::object vy, py::object vz, py::object theta) {
+            const uint n = sim.getNumberOfRelaxationZoneNodes();
+            auto as_array = [n](const py::object& obj, const char* name) -> py::array_t<real, py::array::c_style | py::array::forcecast> {
+                auto arr = py::array_t<real, py::array::c_style | py::array::forcecast>::ensure(obj);
+                if (!arr || (uint)arr.size() != n)
+                    throw std::runtime_error(std::string("push_relaxation_targets: ") + name + " must have " +
+                                             std::to_string(n) + " values (one per zone node)");
+                return arr;
+            };
+            auto u = as_array(vx, "vx");
+            auto v = as_array(vy, "vy");
+            auto w = as_array(vz, "vz");
+            py::array_t<real, py::array::c_style | py::array::forcecast> th;
+            if (!theta.is_none())
+                th = as_array(theta, "theta");
+            sim.pushRelaxationTargets(u.data(), v.data(), w.data(), theta.is_none() ? nullptr : th.data());
+        }, py::arg("vx"), py::arg("vy"), py::arg("vz"), py::arg("theta") = py::none(),
+           "Push the next target frame (velocity in lattice units dx/dt, theta in K as the AD concentration); "
+           "the previous frame becomes the t0 frame of the time interpolation.")
+        .def("apply_relaxation", [](Simulation& sim, real alpha, real rate, bool relax_velocity, bool relax_temperature) {
+            sim.applyRelaxation(alpha, rate, relax_velocity, relax_temperature);
+        }, py::arg("alpha"), py::arg("rate"), py::arg("relax_velocity") = true, py::arg("relax_temperature") = true,
+           "Relax the zone towards (1-alpha)*t0 + alpha*t1 with rate dt/tau at the face (call between time steps).");
     }
 }

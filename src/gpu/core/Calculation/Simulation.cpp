@@ -52,6 +52,7 @@
 #include <parallel/NullCommunicator.h>
 
 #include "BoundaryConditions/AdvectionDiffusion/CellPerturbation.h"
+#include "BoundaryConditions/RelaxationZone/BoundaryRelaxationZone.h"
 #include "Calculation/Calculation.h"
 #include "Calculation/UpdateGrid27.h"
 #include "Communication/ExchangeData27.h"
@@ -1020,6 +1021,56 @@ void Simulation::applyCellPerturbation(const real* thetaPrime, const real* uPrim
 uint Simulation::getNumberOfPerturbationCells() const
 {
     return cellPerturbation ? cellPerturbation->getNumberOfCells() : 0;
+}
+
+//////////////////////////////////////////////////////////////////////////
+uint Simulation::setRelaxationZone(int level, real xMin, real xMax, real yMin, real yMax, real zMax, real width,
+                                   real topWidth, uint faces)
+{
+    if (!para)
+        throw std::runtime_error("Simulation::setRelaxationZone: Parameter object is null");
+    relaxationZone =
+        std::make_unique<BoundaryRelaxationZone>(para.get(), level, xMin, xMax, yMin, yMax, zMax, width, topWidth, faces);
+    return relaxationZone->getNumberOfNodes();
+}
+
+//////////////////////////////////////////////////////////////////////////
+uint Simulation::getNumberOfRelaxationZoneNodes() const
+{
+    return relaxationZone ? relaxationZone->getNumberOfNodes() : 0;
+}
+
+//////////////////////////////////////////////////////////////////////////
+void Simulation::getRelaxationZoneNodes(real* coords_out, real* weights_out) const
+{
+    if (!relaxationZone)
+        throw std::runtime_error("Simulation::getRelaxationZoneNodes: call setRelaxationZone first");
+    const auto& x = relaxationZone->getCoordinatesX();
+    const auto& y = relaxationZone->getCoordinatesY();
+    const auto& z = relaxationZone->getCoordinatesZ();
+    const auto& w = relaxationZone->getWeights();
+    for (size_t i = 0; i < x.size(); i++) {
+        coords_out[i * 3 + 0] = x[i];
+        coords_out[i * 3 + 1] = y[i];
+        coords_out[i * 3 + 2] = z[i];
+        weights_out[i] = w[i];
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////
+void Simulation::pushRelaxationTargets(const real* vx, const real* vy, const real* vz, const real* theta)
+{
+    if (!relaxationZone)
+        throw std::runtime_error("Simulation::pushRelaxationTargets: call setRelaxationZone first");
+    relaxationZone->pushTargets(vx, vy, vz, theta);
+}
+
+//////////////////////////////////////////////////////////////////////////
+void Simulation::applyRelaxation(real alpha, real rate, bool relaxVelocity, bool relaxTemperature)
+{
+    if (!relaxationZone)
+        throw std::runtime_error("Simulation::applyRelaxation: call setRelaxationZone first");
+    relaxationZone->apply(para.get(), alpha, rate, relaxVelocity, relaxTemperature);
 }
 
 //////////////////////////////////////////////////////////////////////////

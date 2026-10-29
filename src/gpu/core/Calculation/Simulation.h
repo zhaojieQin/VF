@@ -68,6 +68,7 @@ class UpdateGrid27;
 class KineticEnergyAnalyzer;
 class EnstrophyAnalyzer;
 class CellPerturbation;
+class BoundaryRelaxationZone;
 class BoundaryConditionFactory;
 class GridScalingFactory;
 class TurbulenceModelFactory;
@@ -130,6 +131,17 @@ public:
     void applyCellPerturbation(const real* thetaPrime, const real* uPrime, const real* vPrime);
     uint getNumberOfPerturbationCells() const;
 
+    // Lateral relaxation zone (nudging towards a mesoscale target), see BoundaryRelaxationZone.h.
+    // Set up once; returns the number of relaxed fluid nodes. Replaces any previous setup.
+    uint setRelaxationZone(int level, real xMin, real xMax, real yMin, real yMax, real zMax, real width, real topWidth,
+                           uint faces);
+    uint getNumberOfRelaxationZoneNodes() const;
+    //! coords_out: (n, 3) node coordinates, weights_out: (n,) ramp weights r(d); n = getNumberOfRelaxationZoneNodes()
+    void getRelaxationZoneNodes(real* coords_out, real* weights_out) const;
+    //! velocity in lattice units, theta in K (concentration units), nullptr for no temperature target
+    void pushRelaxationTargets(const real* vx, const real* vy, const real* vz, const real* theta);
+    void applyRelaxation(real alpha, real rate, bool relaxVelocity, bool relaxTemperature);
+
 private:
     void init(GridProvider &gridProvider, const BoundaryConditionFactory *bcFactory, SPtr<TurbulenceModelFactory> tmFactory, GridScalingFactory *scalingFactory);
     void allocNeighborsOffsetsScalesAndBoundaries(GridProvider& gridProvider, const BoundaryConditionFactory* bcFactory);
@@ -164,6 +176,7 @@ private:
     std::unique_ptr<EnstrophyAnalyzer> enstrophyAnalyzer;
     std::unique_ptr<UpdateGrid27> updateGrid27;
     std::unique_ptr<CellPerturbation> cellPerturbation;
+    std::unique_ptr<BoundaryRelaxationZone> relaxationZone;
 
     vf::basics::MetaData metaData;
 };
