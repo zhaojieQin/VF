@@ -134,6 +134,30 @@ __global__ void AdvectionDiffusionDirichlet_Device(real* populationsArray,
                 writeInInverseDirection<direction>(population, listIndices, populationReferences);
             });
             break;
+        case BoundaryConditionFactory::AdvectionDiffusionDirichletBC::DirichletInterpolatedConsistentInflowSlip: {
+            const real vx1 = velocityX[k_000];
+            const real vx2 = velocityY[k_000];
+            const real vx3 = velocityZ[k_000];
+            // u.n with n = sum of the lattice directions whose link crosses the boundary (outward normal)
+            real outwardVelocity = c0o1;
+            forEachNonRestDirection([&](auto direction) {
+                const real subgridDistance = (subgridDistances.q[direction])[nodeIndex];
+                if (subgridDistance < c0o1 || subgridDistance > c1o1)
+                    return;
+                outwardVelocity += getVelocity<direction>(vx1, vx2, vx3);
+            });
+            // Outflow: zero gradient, the value leaving the domain is the one coming from inside
+            const real concentrationBoundary =
+                outwardVelocity > c0o1 ? vf::lbm::getDensity(populations) : concentrationWall;
+            forEachNonRestDirection([&](auto direction) {
+                const real subgridDistance = (subgridDistances.q[direction])[nodeIndex];
+                if (subgridDistance < c0o1 || subgridDistance > c1o1)
+                    return;
+                const real population = computePopulationInterpolatedAntiBounceBackConsistent<direction>(
+                    subgridDistance, populations, concentrationBoundary, vx1, vx2, vx3);
+                writeInInverseDirection<direction>(population, listIndices, populationReferences);
+            });
+        } break;
     }
 }
 

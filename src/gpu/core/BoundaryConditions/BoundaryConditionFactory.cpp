@@ -288,6 +288,8 @@ AdvectionDiffusionDirichletBoundaryConditionKernel BoundaryConditionFactory::get
             return AdvectionDiffusionDirichletInterpolatedSlip;
         case AdvectionDiffusionDirichletBC::DirichletInterpolatedConsistentSlip:
             return AdvectionDiffusionDirichletInterpolatedConsistentSlip;
+        case AdvectionDiffusionDirichletBC::DirichletInterpolatedConsistentInflowSlip:
+            return AdvectionDiffusionDirichletInterpolatedConsistentInflowSlip;
         default:
             return nullptr;
     };

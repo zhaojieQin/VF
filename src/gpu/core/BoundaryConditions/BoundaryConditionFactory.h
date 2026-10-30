@@ -180,6 +180,9 @@ public:
         //! - Interpolated Dirichlet boundary condition, uses subgrid distances, must be used with Slip. Wall term from the
         //!   even equilibrium part only: keeps a uniform field in a uniform flow and is invariant to a concentration shift
         DirichletInterpolatedConsistentSlip,
+        //! - Like DirichletInterpolatedConsistentSlip on inflow nodes; on outflow nodes (u.n > 0, n = sum of the boundary
+        //!   links) the wall value is the node value (zero gradient), so the prescribed value is only advected inwards
+        DirichletInterpolatedConsistentInflowSlip,
         NotSpecified
     };
 

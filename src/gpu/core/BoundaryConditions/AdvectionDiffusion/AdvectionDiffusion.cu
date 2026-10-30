@@ -142,6 +142,20 @@ void AdvectionDiffusionDirichletInterpolatedConsistentSlip(LBMSimulationParamete
     getLastCudaError("AdvectionDiffusionDirichlet_Device execution failed");
 }
 
+void AdvectionDiffusionDirichletInterpolatedConsistentInflowSlip(LBMSimulationParameter* parameterDevice,
+                                                                 AdvectionDiffusionDirichletBoundaryConditions bcParameters)
+{
+    const vf::cuda::CudaGrid grid(parameterDevice->numberofthreads, bcParameters.numberOfBCnodes);
+
+    AdvectionDiffusionDirichlet_Device<
+        BoundaryConditionFactory::AdvectionDiffusionDirichletBC::DirichletInterpolatedConsistentInflowSlip>
+        <<<grid.grid, grid.threads>>>(parameterDevice->distributionsAD.f[0], bcParameters, parameterDevice->neighborX,
+                                      parameterDevice->neighborY, parameterDevice->neighborZ, parameterDevice->velocityX,
+                                      parameterDevice->velocityY, parameterDevice->velocityZ, parameterDevice->numberOfNodes,
+                                      parameterDevice->omegaDiffusivity, parameterDevice->isEvenTimestep);
+    getLastCudaError("AdvectionDiffusionDirichlet_Device execution failed");
+}
+
 void AdvectionDiffusionDirichletAntiBounceBackNoSlip(LBMSimulationParameter* parameterDevice,
                                                      AdvectionDiffusionDirichletBoundaryConditions bcParameters)
 {

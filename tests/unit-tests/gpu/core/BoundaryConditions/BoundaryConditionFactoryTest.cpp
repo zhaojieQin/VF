@@ -467,6 +467,11 @@ TEST(BoundaryConditionFactoryTest, ADDirichletBoundaryConditions)
     bc = getADDirichletBcTarget(bcFactory);
     EXPECT_TRUE(bc == AdvectionDiffusionDirichletInterpolatedConsistentSlip)
         << "The returned boundary condition is not the expected function AdvectionDiffusionDirichletInterpolatedConsistentSlip.";
+
+    bcFactory.setAdvectionDiffusionDirichletBoundaryCondition(BoundaryConditionFactory::AdvectionDiffusionDirichletBC::DirichletInterpolatedConsistentInflowSlip);
+    bc = getADDirichletBcTarget(bcFactory);
+    EXPECT_TRUE(bc == AdvectionDiffusionDirichletInterpolatedConsistentInflowSlip)
+        << "The returned boundary condition is not the expected function AdvectionDiffusionDirichletInterpolatedConsistentInflowSlip.";
 }
 
 auto getADNeumannBcTarget(BoundaryConditionFactory &bcFactory)
