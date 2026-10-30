@@ -177,6 +177,9 @@ public:
         DirichletInterpolatedNoSlip,
         //! - BounceBack Dirichlet boundary condition, does not use subgrid distances, must be used with NoSlip
         DirichletAntiBounceBackNoSlip,
+        //! - Interpolated Dirichlet boundary condition, uses subgrid distances, must be used with Slip. Wall term from the
+        //!   even equilibrium part only: keeps a uniform field in a uniform flow and is invariant to a concentration shift
+        DirichletInterpolatedConsistentSlip,
         NotSpecified
     };
 

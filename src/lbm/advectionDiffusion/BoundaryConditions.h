@@ -111,6 +111,39 @@ constexpr real computePopulationInterpolatedAntiBounceBack(const real subgridDis
     return -interpolated + c2o1 * equilibriumWall / (subgridDistance + c1o1);
 }
 
+//! \brief Even (symmetric) part of the advection-diffusion equilibrium, e_i^+ = w_i c (1 + 9/2 (c_i.u)^2 - 3/2 u^2)
+template <size_t direction>
+constexpr real computeEvenEquilibrium(real concentration, real velocityX, real velocityY, real velocityZ)
+{
+    using namespace vf::basics::constant;
+    using namespace vf::lbm::dir;
+    const real cu_sq = c3o2 * (velocityX * velocityX + velocityY * velocityY + velocityZ * velocityZ);
+    const real velocity = getVelocity<direction>(velocityX, velocityY, velocityZ);
+    return getWeight<direction>() * concentration * (c1o1 + c9o2 * velocity * velocity - cu_sq);
+}
+
+//! \brief Linearly interpolated anti-bounce-back (Bouzidi form for q >= 1/2, Ginzburg 2005 wall term):
+//! g_inv = -g_i / (2q) + (2q - 1) / (2q) g_inv(x_f) + e_i^+(c_wall) / q, with post-collision g at the fluid node.
+//! Keeps a uniform equilibrium (any velocity) unchanged and is invariant to a constant shift of the concentration;
+//! reduces to the anti-bounce-back -g_i + 2 e_i^+(c_wall) for q = 1/2. q < 1/2 would need a second fluid node and is
+//! treated as q = 1/2.
+template <size_t direction>
+constexpr real computePopulationInterpolatedAntiBounceBackConsistent(const real subgridDistance, const real* populations,
+                                                                     const real concentrationWall,
+                                                                     const real velocityWallX, const real velocityWallY,
+                                                                     const real velocityWallZ)
+{
+    using namespace vf::basics::constant;
+    using namespace vf::lbm::dir;
+
+    const real q = subgridDistance < c1o2 ? c1o2 : subgridDistance;
+    const real evenEquilibriumWall =
+        computeEvenEquilibrium<direction>(concentrationWall, velocityWallX, velocityWallY, velocityWallZ);
+    return (-populations[direction] + (c2o1 * q - c1o1) * populations[inverseDir<direction>()] +
+            c2o1 * evenEquilibriumWall) /
+           (c2o1 * q);
+}
+
 } // namespace vf::lbm::advection_diffusion
 
 #endif

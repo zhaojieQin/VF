@@ -110,6 +110,7 @@ namespace gpu_bindings::boundary_conditions
         .value("DirichletAntiBounceBackSlip", BoundaryConditionFactory::AdvectionDiffusionDirichletBC::DirichletAntiBounceBackSlip)
         .value("DirichletInterpolatedNoSlip", BoundaryConditionFactory::AdvectionDiffusionDirichletBC::DirichletInterpolatedNoSlip)
         .value("DirichletInterpolatedSlip", BoundaryConditionFactory::AdvectionDiffusionDirichletBC::DirichletInterpolatedSlip)
+        .value("DirichletInterpolatedConsistentSlip", BoundaryConditionFactory::AdvectionDiffusionDirichletBC::DirichletInterpolatedConsistentSlip)
         .value("NotSpecified", BoundaryConditionFactory::AdvectionDiffusionDirichletBC::NotSpecified);
 
         py::enum_<BoundaryConditionFactory::AdvectionDiffusionNeumannBC>(parentModule, "AdvectionDiffusionNeumannBC")

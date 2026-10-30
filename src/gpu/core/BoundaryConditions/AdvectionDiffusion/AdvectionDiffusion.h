@@ -61,6 +61,8 @@ void AdvectionDiffusionDirichletAntiBounceBackNoSlip(LBMSimulationParameter* par
                                                      AdvectionDiffusionDirichletBoundaryConditions bcParameters);
 void AdvectionDiffusionDirichletInterpolatedNoSlip(LBMSimulationParameter* parameterDevice,
                                                    AdvectionDiffusionDirichletBoundaryConditions bcParameters);
+void AdvectionDiffusionDirichletInterpolatedConsistentSlip(LBMSimulationParameter* parameterDevice,
+                                                           AdvectionDiffusionDirichletBoundaryConditions bcParameters);
 void AdvectionDiffusionNeumannAntiBounceBackSlip(LBMSimulationParameter* parameterDevice,
                                                  AdvectionDiffusionNeumannBoundaryConditions bcParameters);
 void AdvectionDiffusionNeumannInterpolatedSlip(LBMSimulationParameter* parameterDevice,

@@ -286,6 +286,8 @@ AdvectionDiffusionDirichletBoundaryConditionKernel BoundaryConditionFactory::get
             return AdvectionDiffusionDirichletAntiBounceBackSlip;
         case AdvectionDiffusionDirichletBC::DirichletInterpolatedSlip:
             return AdvectionDiffusionDirichletInterpolatedSlip;
+        case AdvectionDiffusionDirichletBC::DirichletInterpolatedConsistentSlip:
+            return AdvectionDiffusionDirichletInterpolatedConsistentSlip;
         default:
             return nullptr;
     };

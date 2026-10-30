@@ -124,6 +124,16 @@ __global__ void AdvectionDiffusionDirichlet_Device(real* populationsArray,
                 writeInInverseDirection<direction>(population, listIndices, populationReferences);
             });
         } break;
+        case BoundaryConditionFactory::AdvectionDiffusionDirichletBC::DirichletInterpolatedConsistentSlip:
+            forEachNonRestDirection([&](auto direction) {
+                const real subgridDistance = (subgridDistances.q[direction])[nodeIndex];
+                if (subgridDistance < c0o1 || subgridDistance > c1o1)
+                    return;
+                const real population = computePopulationInterpolatedAntiBounceBackConsistent<direction>(
+                    subgridDistance, populations, concentrationWall, velocityX[k_000], velocityY[k_000], velocityZ[k_000]);
+                writeInInverseDirection<direction>(population, listIndices, populationReferences);
+            });
+            break;
     }
 }
 
