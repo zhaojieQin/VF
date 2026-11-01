@@ -138,17 +138,28 @@ __global__ void AdvectionDiffusionDirichlet_Device(real* populationsArray,
             const real vx1 = velocityX[k_000];
             const real vx2 = velocityY[k_000];
             const real vx3 = velocityZ[k_000];
-            // u.n with n = sum of the lattice directions whose link crosses the boundary (outward normal)
-            real outwardVelocity = c0o1;
+            // Outward normal n = sum of the lattice directions whose link crosses the boundary
+            real normalX = c0o1, normalY = c0o1, normalZ = c0o1;
             forEachNonRestDirection([&](auto direction) {
                 const real subgridDistance = (subgridDistances.q[direction])[nodeIndex];
                 if (subgridDistance < c0o1 || subgridDistance > c1o1)
                     return;
-                outwardVelocity += getVelocity<direction>(vx1, vx2, vx3);
+                normalX += getVelocity<direction>(c1o1, c0o1, c0o1);
+                normalY += getVelocity<direction>(c0o1, c1o1, c0o1);
+                normalZ += getVelocity<direction>(c0o1, c0o1, c1o1);
             });
-            // Outflow: zero gradient, the value leaving the domain is the one coming from inside
+            const real normalLength = sqrt(normalX * normalX + normalY * normalY + normalZ * normalZ);
+            const real speed = sqrt(vx1 * vx1 + vx2 * vx2 + vx3 * vx3);
+            // cosine of the angle between the flow and the outward normal: > 0 outflow, < 0 inflow
+            const real cosine = (normalLength > c0o1 && speed > c0o1)
+                                    ? (vx1 * normalX + vx2 * normalY + vx3 * normalZ) / (normalLength * speed)
+                                    : c0o1;
+            // Smooth inflow weight: 1 for inflow (prescribed value), 0 for outflow (zero gradient, node value).
+            // A hard switch at u.n = 0 jumps between the two values whenever u.n changes sign; the ramp spans
+            // about +-6 degrees around the tangential flow direction.
+            const real inflowWeight = c1o2 * (c1o1 - tanh(cosine / c1o10));
             const real concentrationBoundary =
-                outwardVelocity > c0o1 ? vf::lbm::getDensity(populations) : concentrationWall;
+                inflowWeight * concentrationWall + (c1o1 - inflowWeight) * vf::lbm::getDensity(populations);
             forEachNonRestDirection([&](auto direction) {
                 const real subgridDistance = (subgridDistances.q[direction])[nodeIndex];
                 if (subgridDistance < c0o1 || subgridDistance > c1o1)

@@ -181,7 +181,8 @@ public:
         //!   even equilibrium part only: keeps a uniform field in a uniform flow and is invariant to a concentration shift
         DirichletInterpolatedConsistentSlip,
         //! - Like DirichletInterpolatedConsistentSlip on inflow nodes; on outflow nodes (u.n > 0, n = sum of the boundary
-        //!   links) the wall value is the node value (zero gradient), so the prescribed value is only advected inwards
+        //!   links) the wall value is the node value (zero gradient), so the prescribed value is only advected inwards;
+        //!   the two are blended smoothly over about +-6 degrees around tangential flow
         DirichletInterpolatedConsistentInflowSlip,
         NotSpecified
     };

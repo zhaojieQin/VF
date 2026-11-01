@@ -53,7 +53,11 @@ __global__ void cellPerturbation_device(real* distributionsAD, real* distributio
     const uint cell = cellIds[index];
     const ListIndices listIndices(k, neighborX, neighborY, neighborZ);
 
-    // temperature: g_i += w_i theta' (1 + 3 c_i.u), i.e. an equilibrium increment carrying the local velocity
+    // Both increments are full equilibrium differences, g_eq(new) - g_eq(old), so the non-equilibrium part of the
+    // populations is left unchanged. A first-order increment alone leaves a spurious second moment that, with
+    // relaxation rates close to 2, is hardly damped and flips sign every step (2-delta checkerboard).
+
+    // temperature: g_i += w_i theta' (1 + 3 c_i.u + 9/2 (c_i.u)^2 - 3/2 u^2)
     if (thetaPrime != nullptr) {
         const real dTheta = thetaPrime[cell];
         if (dTheta != c0o1) {
@@ -63,15 +67,16 @@ __global__ void cellPerturbation_device(real* distributionsAD, real* distributio
             const real vx = velocityX[k];
             const real vy = velocityY[k];
             const real vz = velocityZ[k];
+            const real cu_sq = c3o2 * (vx * vx + vy * vy + vz * vz);
             forEachDirection([&](auto direction) {
-                populations[direction] +=
-                    getWeight<direction>() * dTheta * (c1o1 + c3o1 * getVelocity<direction>(vx, vy, vz));
+                const real cu = getVelocity<direction>(vx, vy, vz);
+                populations[direction] += getWeight<direction>() * dTheta * (c1o1 + c3o1 * cu + c9o2 * cu * cu - cu_sq);
             });
             setPreCollisionDistribution(g, listIndices, populations);
         }
     }
 
-    // momentum (optional): f_i += w_i 3 rho c_i.u', density unchanged
+    // momentum (optional): f_i += f_eq(rho, u + u') - f_eq(rho, u), density unchanged
     if (uPrime != nullptr && vPrime != nullptr) {
         const real du = uPrime[cell];
         const real dv = vPrime[cell];
@@ -79,9 +84,19 @@ __global__ void cellPerturbation_device(real* distributionsAD, real* distributio
             Distributions27 f = getDistributionReferences27(distributions, numberOfLBnodes, isEvenTimestep);
             real populations[NUMBER_Of_DIRECTIONS];
             getPreCollisionDistribution(populations, f, listIndices);
-            const real rho = c1o1 + vf::lbm::getDensity(populations); // compressible kernels store the deviation
-            forEachNonRestDirection([&](auto direction) {
-                populations[direction] += getWeight<direction>() * c3o1 * rho * getVelocity<direction>(du, dv, c0o1);
+            const real drho = vf::lbm::getDensity(populations); // compressible kernels store the deviation
+            const real rho = c1o1 + drho;
+            const real vx = vf::lbm::getCompressibleVelocityX1(populations, drho);
+            const real vy = vf::lbm::getCompressibleVelocityX2(populations, drho);
+            const real vz = vf::lbm::getCompressibleVelocityX3(populations, drho);
+            const real vxNew = vx + du;
+            const real vyNew = vy + dv;
+            const real dCu_sq = c3o2 * ((vxNew * vxNew + vyNew * vyNew) - (vx * vx + vy * vy));
+            forEachDirection([&](auto direction) {
+                const real cu = getVelocity<direction>(vx, vy, vz);
+                const real cuNew = getVelocity<direction>(vxNew, vyNew, vz);
+                populations[direction] +=
+                    getWeight<direction>() * rho * (c3o1 * (cuNew - cu) + c9o2 * (cuNew * cuNew - cu * cu) - dCu_sq);
             });
             setPreCollisionDistribution(f, listIndices, populations);
         }
